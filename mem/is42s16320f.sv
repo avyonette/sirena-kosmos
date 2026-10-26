@@ -7,14 +7,16 @@
 
 	based on the documentation at https://www.issi.com/WW/pdf/42-45R-S_86400F-16320F.pdf
 */
+import mem::*;
+
 module is42s16320f_controller
 #(parameter CLK_TIME_NS = 20)
 (
 	input logic clk, // FPGA clock
-	input logic [1:0] i_cmd, // command
+	input MemCtrlCmd i_cmd, // command
 	input logic [31:0] i_adr, // address
-	input logic [7:0] i_data, // data for writing
-	output logic [7:0] o_res, // result from reading
+	input logic [31:0] i_data, // data for writing
+	output logic [31:0] o_data, // result from reading
 	output logic o_rdy, // controller is idle (ready to receive commands)
 	output logic o_done, // command has finished
 	output logic o_clk, // DRAM clock
@@ -39,15 +41,6 @@ module is42s16320f_controller
 	assign io_dq = dq_rw ? o_dq : 16'hZZ;
 	wire [15:0] i_dq = io_dq;
 	
-	parameter
-		CMD_NONE = 2'b00,
-		CMD_READ = 2'b01,
-		CMD_WRITE = 2'b10;
-		
-	localparam
-		CMD_READ_I = 0,
-		CMD_WRITE_I = 1;
-	
 	localparam H = 1'b1; // high
 	localparam L = 1'b0; // low
 
@@ -60,20 +53,26 @@ module is42s16320f_controller
 	localparam T_RC_NS = 63; // 18. LATENCY RELATIONSHIPS
 	localparam T_RC_CYCLES = (T_RC_NS + CLK_TIME_NS - 1) / CLK_TIME_NS; // round up
 	
-	typedef enum bit[11:0] {
-		S_NONE = 12'd0,
-		S_INIT = 12'd1,
-		S_INIT_PRECHARGE = 12'd2,
-		S_INIT_REFRESH = 12'd4,
-		S_INIT_SETUP = 12'd8,
-		S_INIT_OK = 12'd16,
-		S_WORK_IDLE = 12'd32,
-		S_WORK_ACTIVATE = 12'd64,
-		S_WORK_READ = 12'd128,
-		S_WORK_READ_RESULT = 12'd256,
-		S_WORK_WRITE = 12'd512,
-		S_WORK_PRECHARGE = 12'd1024,
-		S_CMD_WAIT = 12'd2048
+	typedef enum bit[17:0] {
+		S_NONE = 18'd0,
+		S_INIT = 18'd1,
+		S_INIT_PRECHARGE = 18'd2,
+		S_INIT_REFRESH = 18'd4,
+		S_INIT_SETUP = 18'd8,
+		S_INIT_OK = 18'd16,
+		S_WORK_IDLE = 18'd32,
+		S_WORK_ACTIVATE = 18'd64,
+		S_WORK_READ8 = 18'd128,
+		S_WORK_READ8_RESULT = 18'd256,
+		S_WORK_WRITE8 = 18'd512,
+		S_WORK_PRECHARGE = 18'd1024,
+		S_CMD_WAIT = 18'd2048,
+		S_WORK_READ16 = 18'd4096,
+		S_WORK_READ16_RESULT = 18'd8192,
+		S_WORK_READ32 = 18'd16384,
+		S_WORK_READ32_RESULT = 18'd32768,
+		S_WORK_WRITE16 = 18'd65536,
+		S_WORK_WRITE32 = 18'd131072
 	} State;
 	
 	localparam
@@ -84,11 +83,17 @@ module is42s16320f_controller
 		S_INIT_OK_I = 4,
 		S_WORK_IDLE_I = 5,
 		S_WORK_ACTIVATE_I = 6,
-		S_WORK_READ_I = 7,
-		S_WORK_READ_RESULT_I = 8,
-		S_WORK_WRITE_I = 9,
+		S_WORK_READ8_I = 7,
+		S_WORK_READ8_RESULT_I = 8,
+		S_WORK_WRITE8_I = 9,
 		S_WORK_PRECHARGE_I = 10,
-		S_CMD_WAIT_I = 11;
+		S_CMD_WAIT_I = 11,
+		S_WORK_READ16_I = 12,
+		S_WORK_READ16_RESULT_I = 13,
+		S_WORK_READ32_I = 14,
+		S_WORK_READ32_RESULT_I = 15,
+		S_WORK_WRITE16_I = 16,
+		S_WORK_WRITE32_I = 17;
 	
 	// state
 	State state = S_INIT;
@@ -179,22 +184,12 @@ module is42s16320f_controller
 				o_rdy = 1'b1;
 				
 				unique case(1'b1)
-					i_cmd[CMD_READ_I]: begin
-						target_state = S_WORK_READ;
-					end
-					i_cmd[CMD_WRITE_I]: begin
-						target_state = S_WORK_WRITE;
-					end
-					i_cmd[CMD_READ_I], i_cmd[CMD_WRITE_I]: begin
-						state = S_WORK_ACTIVATE;
-						o_done = 1'b0;
-						
-						// this truncates; that's fine
-						adr_bank_index = i_adr >> 24; // 4 banks, 128 Mb (16 MiB) per bank
-						adr_col_index = ((i_adr & 32'hFFFFFF) >> 1) & 10'h3FF; // low 10 bits after word alignment = column
-						adr_row_index = ((i_adr & 32'hFFFFFF) >> 11) & 13'h1FFF; // high 13 bits = row
-						lo_hi_sel = i_adr & 1; // 16-bit word
-					end
+					i_cmd[MC_CMD_READ8_I]: target_state = S_WORK_READ8;
+					i_cmd[MC_CMD_READ16_I]: target_state = S_WORK_READ16;
+					i_cmd[MC_CMD_READ32_I]: target_state = S_WORK_READ32;
+					i_cmd[MC_CMD_WRITE8_I]: target_state = S_WORK_WRITE8;
+					i_cmd[MC_CMD_WRITE16_I]: target_state = S_WORK_WRITE16;
+					i_cmd[MC_CMD_WRITE32_I]: target_state = S_WORK_WRITE32;
 					default: begin
 						// periodic refresh
 						if(ref_counter < REFRESH_CYCLES) begin
@@ -206,44 +201,80 @@ module is42s16320f_controller
 						end
 					end
 				endcase
+				
+				if(i_cmd != 0) begin
+					state = S_WORK_ACTIVATE;
+					o_done = 1'b0;
+					
+					// this truncates; that's fine
+					adr_bank_index = i_adr >> 24; // 4 banks, 128 Mb (16 MiB) per bank
+					adr_col_index = ((i_adr & 32'hFFFFFF) >> 1) & 10'h3FF; // low 10 bits after word alignment = column
+					adr_row_index = ((i_adr & 32'hFFFFFF) >> 11) & 13'h1FFF; // high 13 bits = row
+					lo_hi_sel = i_adr & 1; // 16-bit word
+				end
 			end
 			state[S_WORK_ACTIVATE_I]: begin
-				if(lo_hi_sel == 1'b1) begin
+				//if(lo_hi_sel == 1'b1) begin
 					// high 8 bit access
-					o_dqmh = L;
-					o_dqml = H; // high impedance - ignored
-				end else begin
+				//	o_dqmh = L;
+				//	o_dqml = H; // high impedance - ignored
+				//end else begin
 					// low 8 bit access
-					o_dqmh = H; // high impedance - ignored
-					o_dqml = L;
-				end
+				//	o_dqmh = H; // high impedance - ignored
+				//	o_dqml = L;
+				//end
 				
 				// need to wait 2 cycles for DQM to propagate (?)
 				// "DQ's read data is subject to the logic level on the DQM inputs two clocks earlier"
-				if(clk_counter < 2) begin
-					clk_counter = clk_counter + 1;
-					call_command(0, S_NONE, L, H, H, H, 0, 0); // NOP
-				end else begin
+				//if(clk_counter < 2) begin
+				//	clk_counter = clk_counter + 1;
+				//	call_command(0, S_NONE, L, H, H, H, 0, 0); // NOP
+				//end else begin
 					clk_counter = 0;
 					call_command(1, target_state, L, L, H, H, adr_bank_index, adr_row_index); // ACT
-				end
+				//end
 			end
-			state[S_WORK_READ_I]: begin
-				call_command(1, S_WORK_READ_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
+			state[S_WORK_READ8_I]: begin
+				call_command(1, S_WORK_READ8_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
 			end
-			state[S_WORK_READ_RESULT_I]: begin
+			state[S_WORK_READ8_RESULT_I]: begin
 				if(lo_hi_sel == 1'b1) begin
 					// high selector
-					o_res = i_dq[15:8];
+					o_data = i_dq[15:8];
 				end else begin
 					// low selector
-					o_res = i_dq[7:0];
+					o_data = i_dq[7:0];
 				end
 				
 				state = S_WORK_PRECHARGE;
 				o_done = 1'b1;
 			end
-			state[S_WORK_WRITE_I]: begin
+			state[S_WORK_READ16_I]: begin
+				call_command(1, S_WORK_READ16_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
+			end
+			state[S_WORK_READ16_RESULT_I]: begin
+				o_data = i_dq;
+				state = S_WORK_PRECHARGE;
+				o_done = 1'b1;
+			end
+			state[S_WORK_READ32_I]: begin
+				// reusing the low/high selector but in a silly way :3
+				// TODO is it possible for +1 to be out of the row/col/bank range when reading a 32-bit aligned address?
+				call_command(1, S_WORK_READ32_RESULT, L, H, L, H, adr_bank_index, adr_col_index + lo_hi_sel);
+			end
+			state[S_WORK_READ32_RESULT_I]: begin
+				if(lo_hi_sel == 1'b0) begin
+					o_data[15:0] = i_dq;
+					lo_hi_sel = 1'b1;
+					state = S_WORK_READ32;
+				end else begin
+					o_data[31:16] = i_dq;
+					lo_hi_sel = 1'b0;
+					state = S_WORK_PRECHARGE;
+					o_done = 1'b1;
+				end
+			end
+			state[S_WORK_WRITE8_I]: begin
 				dq_rw = 1'b1; // make dq writeable
 				
 				if(lo_hi_sel == 1'b1) begin
@@ -256,6 +287,27 @@ module is42s16320f_controller
 				
 				o_done = 1'b1;
 				call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+			end
+			state[S_WORK_WRITE16_I]: begin
+				dq_rw = 1'b1; // make dq writeable
+				o_dq = i_data;
+				o_done = 1'b1;
+				call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+			end
+			state[S_WORK_WRITE32_I]: begin
+				// reusing the low/high selector but in a silly way :3
+				dq_rw = 1'b1; // make dq writeable
+				
+				if(lo_hi_sel == 1'b0) begin
+					o_dq = i_data[15:0];
+					lo_hi_sel = 1'b1;
+					call_command(1, S_WORK_WRITE32, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+				end else begin
+					o_dq = i_data[31:16];
+					lo_hi_sel = 1'b0;
+					call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+					o_done = 1'b1;
+				end
 			end
 			state[S_WORK_PRECHARGE_I]: begin
 				call_command(1, S_WORK_IDLE, L, L, H, L, adr_bank_index, 0); // PRE
