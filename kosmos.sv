@@ -22,7 +22,7 @@ module kosmos(
 	logic [7:0] sdram_data;
 	logic [7:0] sdram_res;
 	logic sdram_rdy;
-	logic sdram_idle;
+	logic sdram_done;
 
 	is42s16320f_controller m_sdram(
 		.clk(CLK_50_1),
@@ -31,7 +31,7 @@ module kosmos(
 		.i_data(sdram_data),
 		.o_res(sdram_res),
 		.o_rdy(sdram_rdy),
-		.o_idle(sdram_idle),
+		.o_done(sdram_done),
 		.o_clk(DRAM_CLK),
 		.o_cke(DRAM_CKE),
 		.o_cs(DRAM_CS_N),
@@ -46,11 +46,11 @@ module kosmos(
 	);
 	
 	always @(posedge clk) begin
-		LEDR[8] = sdram_idle;
+		LEDR[8] = sdram_done;
 		LEDR[9] = sdram_rdy;
 		sdram_cmd = 2'b00;
 		
-		if(sdram_idle) begin
+		if(sdram_rdy) begin
 			if(SW[0]) begin
 				// write to 0x0000 1234
 				sdram_cmd = 2'b10;
@@ -74,7 +74,7 @@ module kosmos(
 			end
 		end
 		
-		if(sdram_rdy) begin
+		if(sdram_done) begin
 			LEDR[7:0] = sdram_res;
 		end
 		

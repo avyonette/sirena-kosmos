@@ -15,8 +15,8 @@ module is42s16320f_controller
 	input logic [31:0] i_adr, // address
 	input logic [7:0] i_data, // data for writing
 	output logic [7:0] o_res, // result from reading
-	output logic o_rdy, // result is ready
-	output logic o_idle, // controller is idle
+	output logic o_rdy, // controller is idle (ready to receive commands)
+	output logic o_done, // command has finished
 	output logic o_clk, // DRAM clock
 	output logic o_cke, // clock enable
 	output logic o_cs, // chip select
@@ -138,7 +138,7 @@ module is42s16320f_controller
 	reg [12:0] ref_counter = 13'b0;
 	
 	always @(posedge clk) begin
-		o_idle = 1'b0;
+		o_rdy = 1'b0;
 	
 		unique case(1'b1)
 			// initialisation cycle
@@ -176,18 +176,18 @@ module is42s16320f_controller
 			// work cycle
 			state[S_WORK_IDLE_I]: begin
 				dq_rw = 1'b0; // dq is read normally, write enabled only in S_WORK_WRITE
-				o_idle = 1'b1;
+				o_rdy = 1'b1;
 				
 				unique case(1'b1)
 					i_cmd[CMD_READ_I]: begin
 						target_state = S_WORK_READ;
-						o_rdy = 1'b0;
 					end
 					i_cmd[CMD_WRITE_I]: begin
 						target_state = S_WORK_WRITE;
 					end
 					i_cmd[CMD_READ_I], i_cmd[CMD_WRITE_I]: begin
 						state = S_WORK_ACTIVATE;
+						o_done = 1'b0;
 						
 						// this truncates; that's fine
 						adr_bank_index = i_adr >> 24; // 4 banks, 128 Mb (16 MiB) per bank
@@ -241,7 +241,7 @@ module is42s16320f_controller
 				end
 				
 				state = S_WORK_PRECHARGE;
-				o_rdy = 1'b1;
+				o_done = 1'b1;
 			end
 			state[S_WORK_WRITE_I]: begin
 				dq_rw = 1'b1; // make dq writeable
@@ -254,6 +254,7 @@ module is42s16320f_controller
 					o_dq[7:0] = i_data;
 				end
 				
+				o_done = 1'b1;
 				call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 			end
 			state[S_WORK_PRECHARGE_I]: begin
