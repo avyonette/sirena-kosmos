@@ -19,7 +19,7 @@ module sysram_controller
 	// Variable to hold the registered read address
 	//reg [ADDR_WIDTH-1:0] addr_reg;
 
-	always @ (posedge clk) begin
+	always @ (negedge clk) begin // negedge to execute right after MMU's cycle and before its next cycle
 		/*word_adr = i_adr >> 2;
 		half_word_offset = i_adr & 'b10;
 		byte_offset = i_adr & 'b11;*/

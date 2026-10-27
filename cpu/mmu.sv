@@ -181,6 +181,10 @@ module cpu_mmu(
 						route_address(MC_CMD_WRITE32, i_adr, S_WRITE32, i_data);
 					end
 				endcase
+
+				if(i_cmd != 0) begin
+					o_done = 1'b0;
+				end
 			end
 			// for rdy wait
 			state[S_READ8_I]: route_address(MC_CMD_READ8, i_adr, S_READ8, 0);

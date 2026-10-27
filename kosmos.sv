@@ -26,7 +26,7 @@ module kosmos(
 );
 	wire clk = CLK_50_1;
 
-	MemCtrlCmd sdram_cmd;
+	MemCtrlCmd sdram_cmd = MC_CMD_NOP;
 	logic [31:0] sdram_adr;
 	logic [7:0] sdram_data_in;
 	logic [7:0] sdram_data_out;
@@ -54,7 +54,7 @@ module kosmos(
 		.io_dq(DRAM_DQ)
 	);
 	
-	MemCtrlCmd sysram_cmd;
+	MemCtrlCmd sysram_cmd = MC_CMD_NOP;
 	logic [16:0] sysram_adr;
 	logic [7:0] sysram_data_in;
 	logic [7:0] sysram_data_out;
@@ -67,7 +67,7 @@ module kosmos(
 		.o_data(sysram_data_out)
 	);
 	
-	MmuCmd mmu_cmd;
+	MmuCmd mmu_cmd = MMU_CMD_NOP;
 	logic [31:0] mmu_adr_in;
 	logic [31:0] mmu_data_in;
 	logic [31:0] mmu_data_out;

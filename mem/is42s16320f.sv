@@ -176,6 +176,8 @@ module is42s16320f_controller
 				call_command(1, S_INIT_OK, L, L, L, L, 0, 13'b0001000110000); // MRS
 			end
 			state[S_INIT_OK_I]: begin
+				o_dqmh = L;
+				o_dqml = L;
 				state = S_WORK_IDLE; // init complete, switch to work cycle
 			end
 			// work cycle
@@ -210,7 +212,13 @@ module is42s16320f_controller
 					adr_bank_index = i_adr >> 24; // 4 banks, 128 Mb (16 MiB) per bank
 					adr_col_index = ((i_adr & 32'hFFFFFF) >> 1) & 10'h3FF; // low 10 bits after word alignment = column
 					adr_row_index = ((i_adr & 32'hFFFFFF) >> 11) & 13'h1FFF; // high 13 bits = row
-					lo_hi_sel = i_adr & 1; // 16-bit word
+					//lo_hi_sel = i_adr & 1; // 16-bit word
+
+					if(i_cmd[MC_CMD_READ32_I] || i_cmd[MC_CMD_WRITE32_I]) begin
+						lo_hi_sel = 1'b0;
+					end else begin
+						lo_hi_sel = i_adr & 1; // 16-bit word
+					end
 				end
 			end
 			state[S_WORK_ACTIVATE_I]: begin
