@@ -131,6 +131,7 @@ module is42s16320f_controller
 	
 	//
 	reg lo_hi_sel = 1'b0;
+	//logic s = 1'b0;
 	
 	/*
 		address encoding:
@@ -143,7 +144,7 @@ module is42s16320f_controller
 	reg [12:0] ref_counter = 13'b0;
 	
 	always @(posedge clk) begin
-		o_rdy = 1'b0;
+		//o_rdy = 1'b0;
 	
 		unique case(1'b1)
 			// initialisation cycle
@@ -183,7 +184,11 @@ module is42s16320f_controller
 			// work cycle
 			state[S_WORK_IDLE_I]: begin
 				dq_rw = 1'b0; // dq is read normally, write enabled only in S_WORK_WRITE
+				
+			/*if(s == 1'b1) begin
 				o_rdy = 1'b1;
+			end else begin
+				s = 1'b0;*/
 				
 				unique case(1'b1)
 					i_cmd[MC_CMD_READ8_I]: target_state = S_WORK_READ8;
@@ -193,6 +198,8 @@ module is42s16320f_controller
 					i_cmd[MC_CMD_WRITE16_I]: target_state = S_WORK_WRITE16;
 					i_cmd[MC_CMD_WRITE32_I]: target_state = S_WORK_WRITE32;
 					default: begin
+						o_rdy = 1'b1;
+						
 						// periodic refresh
 						if(ref_counter < REFRESH_CYCLES) begin
 							ref_counter = ref_counter + 1'b1;
@@ -206,6 +213,7 @@ module is42s16320f_controller
 				
 				if(i_cmd != 0) begin
 					state = S_WORK_ACTIVATE;
+					o_rdy = 1'b0;
 					o_done = 1'b0;
 					
 					// this truncates; that's fine
@@ -217,9 +225,12 @@ module is42s16320f_controller
 					if(i_cmd[MC_CMD_READ32_I] || i_cmd[MC_CMD_WRITE32_I]) begin
 						lo_hi_sel = 1'b0;
 					end else begin
-						lo_hi_sel = i_adr & 1; // 16-bit word
+						lo_hi_sel = i_adr & 1'b1; // 16-bit word
 					end
 				end
+				
+			//end
+			
 			end
 			state[S_WORK_ACTIVATE_I]: begin
 				//if(lo_hi_sel == 1'b1) begin
@@ -287,10 +298,10 @@ module is42s16320f_controller
 				
 				if(lo_hi_sel == 1'b1) begin
 					// high selector
-					o_dq[15:8] = i_data;
+					o_dq[15:8] = i_data[7:0];
 				end else begin
 					// low selector
-					o_dq[7:0] = i_data;
+					o_dq[7:0] = i_data[7:0];
 				end
 				
 				o_done = 1'b1;
@@ -298,7 +309,7 @@ module is42s16320f_controller
 			end
 			state[S_WORK_WRITE16_I]: begin
 				dq_rw = 1'b1; // make dq writeable
-				o_dq = i_data;
+				o_dq = i_data[15:0];
 				o_done = 1'b1;
 				call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 			end
@@ -319,6 +330,8 @@ module is42s16320f_controller
 			end
 			state[S_WORK_PRECHARGE_I]: begin
 				call_command(1, S_WORK_IDLE, L, L, H, L, adr_bank_index, 0); // PRE
+				//s = 1'b1;
+				o_rdy = 1'b1;
 			end
 			// cmd wait
 			state[S_CMD_WAIT_I]: begin

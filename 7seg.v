@@ -30,32 +30,32 @@ module Binary_To_7Segment
   always @(posedge i_Clk)
     begin
       case (i_Binary_Num)
-        4'b0000 : r_Hex_Encoding <= 7'h7E;
-        4'b0001 : r_Hex_Encoding <= 7'h30;
-        4'b0010 : r_Hex_Encoding <= 7'h6D;
-        4'b0011 : r_Hex_Encoding <= 7'h79;
-        4'b0100 : r_Hex_Encoding <= 7'h33;
-        4'b0101 : r_Hex_Encoding <= 7'h5B;
-        4'b0110 : r_Hex_Encoding <= 7'h5F;
-        4'b0111 : r_Hex_Encoding <= 7'h70;
-        4'b1000 : r_Hex_Encoding <= 7'h7F;
-        4'b1001 : r_Hex_Encoding <= 7'h7B;
-        4'b1010 : r_Hex_Encoding <= 7'h77;
-        4'b1011 : r_Hex_Encoding <= 7'h1F;
-        4'b1100 : r_Hex_Encoding <= 7'h4E;
-        4'b1101 : r_Hex_Encoding <= 7'h3D;
-        4'b1110 : r_Hex_Encoding <= 7'h4F;
-        4'b1111 : r_Hex_Encoding <= 7'h47;
+		4'h1: r_Hex_Encoding = 7'b1111001;	// ---t----
+		4'h2: r_Hex_Encoding = 7'b0100100; 	// |	  |
+		4'h3: r_Hex_Encoding = 7'b0110000; 	// lt	 rt
+		4'h4: r_Hex_Encoding = 7'b0011001; 	// |	  |
+		4'h5: r_Hex_Encoding = 7'b0010010; 	// ---m----
+		4'h6: r_Hex_Encoding = 7'b0000010; 	// |	  |
+		4'h7: r_Hex_Encoding = 7'b1111000; 	// lb	 rb
+		4'h8: r_Hex_Encoding = 7'b0000000; 	// |	  |
+		4'h9: r_Hex_Encoding = 7'b0011000; 	// ---b----
+		4'ha: r_Hex_Encoding = 7'b0001000;
+		4'hb: r_Hex_Encoding = 7'b0000011;
+		4'hc: r_Hex_Encoding = 7'b1000110;
+		4'hd: r_Hex_Encoding = 7'b0100001;
+		4'he: r_Hex_Encoding = 7'b0000110;
+		4'hf: r_Hex_Encoding = 7'b0001110;
+		4'h0: r_Hex_Encoding = 7'b1000000;
       endcase
     end // always @ (posedge i_Clk)
 
   // r_Hex_Encoding[7] is unused
-  assign o_Segment_A = r_Hex_Encoding[6];
-  assign o_Segment_B = r_Hex_Encoding[5];
-  assign o_Segment_C = r_Hex_Encoding[4];
+  assign o_Segment_A = r_Hex_Encoding[0];
+  assign o_Segment_B = r_Hex_Encoding[1];
+  assign o_Segment_C = r_Hex_Encoding[2];
   assign o_Segment_D = r_Hex_Encoding[3];
-  assign o_Segment_E = r_Hex_Encoding[2];
-  assign o_Segment_F = r_Hex_Encoding[1];
-  assign o_Segment_G = r_Hex_Encoding[0];
+  assign o_Segment_E = r_Hex_Encoding[4];
+  assign o_Segment_F = r_Hex_Encoding[5];
+  assign o_Segment_G = r_Hex_Encoding[6];
 
 endmodule // Binary_To_7Segment

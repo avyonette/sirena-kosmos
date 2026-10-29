@@ -28,10 +28,10 @@ module kosmos(
 
 	MemCtrlCmd sdram_cmd = MC_CMD_NOP;
 	logic [31:0] sdram_adr;
-	logic [7:0] sdram_data_in;
-	logic [7:0] sdram_data_out;
-	logic sdram_rdy;
-	logic sdram_done;
+	logic [31:0] sdram_data_in;
+	logic [31:0] sdram_data_out;
+	logic sdram_rdy = 1'b0;
+	logic sdram_done = 1'b0;
 
 	is42s16320f_controller m_sdram(
 		.clk(CLK_50_1),
@@ -54,14 +54,15 @@ module kosmos(
 		.io_dq(DRAM_DQ)
 	);
 	
-	MemCtrlCmd sysram_cmd = MC_CMD_NOP;
-	logic [16:0] sysram_adr;
-	logic [7:0] sysram_data_in;
-	logic [7:0] sysram_data_out;
+	//MemCtrlCmd sysram_cmd = MC_CMD_NOP;
+	logic sysram_write;
+	logic [17:0] sysram_adr;
+	logic [31:0] sysram_data_in;
+	logic [31:0] sysram_data_out;
 	
 	sysram_controller m_sysram(
 		.clk(CLK_50_1),
-		.i_cmd(sysram_cmd),
+		.i_w(sysram_write),
 		.i_adr(sysram_adr),
 		.i_data(sysram_data_in),
 		.o_data(sysram_data_out)
@@ -72,8 +73,8 @@ module kosmos(
 	logic [31:0] mmu_data_in;
 	logic [31:0] mmu_data_out;
 	logic [31:0] mmu_padr_out;
-	logic mmu_rdy;
-	logic mmu_done;
+	logic mmu_rdy = 1'b0;
+	logic mmu_done = 1'b0;
 	
 	cpu_mmu m_mmu(
 		.clk(CLK_50_1),
@@ -92,10 +93,12 @@ module kosmos(
 		.i_sdram_rdy(sdram_rdy),
 		.i_sdram_done(sdram_done),
 		
-		.o_sysram_cmd(sysram_cmd),
+		.o_sysram_write(sysram_write),
 		.o_sysram_adr(sysram_adr),
 		.o_sysram_data(sysram_data_in),
-		.i_sysram_data(sysram_data_out)
+		.i_sysram_data(sysram_data_out),
+		
+		.i_leds(LEDR[7:0])
 	);
 	
 	logic [3:0] b_num_0;
@@ -232,22 +235,34 @@ module kosmos(
 				mmu_cmd = MMU_CMD_MREAD16;
 				mmu_adr_in = 32'hA123_4562;
 			end else if(SW[8]) begin
-				// read half-word from 0xFFFF 1234
+				// read half-word from 0xFFFF 1000
 				mmu_cmd = MMU_CMD_MREAD16;
-				mmu_adr_in = 32'hFFFF_1234;
+				mmu_adr_in = 32'hFFFF_1000;
 			end else if(SW[9]) begin
-				// read half-word from 0xFFFF 1236
+				// read half-word from 0xFFFF 1002
 				mmu_cmd = MMU_CMD_MREAD16;
-				mmu_adr_in = 32'hFFFF_1236;
+				mmu_adr_in = 32'hFFFF_1002;
 			end
 		end
 		
 		if(mmu_done) begin
-			display_7seg(mmu_data_out[31:8]);
-			LEDR[7:0] = mmu_data_out[7:0];
+			mmu_cmd = MMU_CMD_NOP;
 		end
 		
-		if(!SW[9:4]) LEDR[7:0] = 8'b0;
+		if(!SW[9:4]) begin
+			display_7seg(24'b0);
+			//LEDR[7:0] = 8'b0;
+		end else begin
+			//display_7seg(24'hABCDEF);
+			display_7seg(mmu_data_out[31:8]);
+			//LEDR[7:0] = mmu_data_out[7:0];
+		end
+		
+		/*if(mmu_cmd == 0) begin
+			LEDR[7] = 1'b1;
+		end else begin
+			LEDR[7] = 1'b0;
+		end*/
 	end
 
 endmodule
