@@ -300,9 +300,9 @@ module is42s16320f_controller
 				o_done = 1'b1;
 			end
 			state[S_WORK_READ32_I]: begin
-				// reusing the low/high selector but in a silly way :3
+				// reusing the low/high selector but in a silly way :3 (i.e. for low/high word selection)
 				// TODO is it possible for +1 to be out of the row/col/bank range when reading a 32-bit aligned address?
-				call_command(T_RC_CYCLES, S_WORK_READ32_RESULT, L, H, L, H, adr_bank_index, adr_col_index + lo_hi_sel);
+				call_command(T_RC_CYCLES, S_WORK_READ32_RESULT, L, H, L, H, adr_bank_index, adr_col_index + lo_hi_sel); // READ
 			end
 			state[S_WORK_READ32_RESULT_I]: begin
 				if(lo_hi_sel == 1'b0) begin
@@ -337,7 +337,7 @@ module is42s16320f_controller
 				call_command(T_RC_CYCLES, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 			end
 			state[S_WORK_WRITE32_I]: begin
-				// reusing the low/high selector but in a silly way :3
+				// reusing the low/high selector but in a silly way :3 (i.e. for low/high word selection)
 				dq_rw = 1'b1; // make dq writeable
 				
 				if(lo_hi_sel == 1'b0) begin
@@ -347,7 +347,7 @@ module is42s16320f_controller
 				end else begin
 					o_dq = i_data[31:16];
 					lo_hi_sel = 1'b0;
-					call_command(T_RC_CYCLES, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+					call_command(T_RC_CYCLES, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index + 1); // WRITE
 					o_done = 1'b1;
 				end
 			end

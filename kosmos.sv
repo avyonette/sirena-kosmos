@@ -199,9 +199,9 @@ module kosmos(
 		
 		if(mmu_rdy) begin
 			if(SW[0]) begin
-				// write byte to 0x0021 AB12
-				mmu_cmd = MMU_CMD_MWRITE8;
-				mmu_data_in = 8'b10101010;
+				// write half_word to 0x0021 AB12
+				mmu_cmd = MMU_CMD_MWRITE16;
+				mmu_data_in = 16'h1357;
 				mmu_adr_in = 32'h0021_AB12;
 			end else if(SW[1]) begin
 				// write half-word to 0xFFFF 1234
@@ -220,7 +220,7 @@ module kosmos(
 				mmu_adr_in = 32'hFFFE_1000;
 			end else if(SW[4]) begin
 				// read half-word from 0x0021 AB12
-				mmu_cmd = MMU_CMD_MREAD8;
+				mmu_cmd = MMU_CMD_MREAD16;
 				mmu_adr_in = 32'h0021_AB12;
 			end else if(SW[5]) begin
 				// read half-word from 0xFFFF 1234
