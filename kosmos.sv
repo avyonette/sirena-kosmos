@@ -245,14 +245,6 @@ module kosmos(
 			end
 		end
 		
-		//if(mmu_done) begin
-		//	mmu_cmd = MMU_CMD_NOP;
-		//end
-		
-		if(!SW[9:0]) begin
-			mmu_cmd = MMU_CMD_NOP;
-		end
-		
 		if(!SW[9:4]) begin
 			display_7seg(24'b0);
 			LEDR[7:0] = 8'b0;

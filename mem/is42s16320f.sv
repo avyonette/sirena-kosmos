@@ -134,7 +134,6 @@ module is42s16320f_controller
 	
 	//
 	reg lo_hi_sel = 1'b0;
-	//logic s = 1'b0;
 	
 	/*
 		address encoding:
@@ -147,8 +146,6 @@ module is42s16320f_controller
 	reg [12:0] ref_counter = 13'b0;
 	
 	always @(posedge clk) begin
-		//o_rdy = 1'b0;
-
 		ref_counter = ref_counter + 1'b1;
 	
 		unique case(1'b1)
@@ -190,11 +187,6 @@ module is42s16320f_controller
 			state[S_WORK_IDLE_I]: begin
 				dq_rw = 1'b0; // dq is read normally, write enabled only in S_WORK_WRITE
 				
-			/*if(s == 1'b1) begin
-				o_rdy = 1'b1;
-			end else begin
-				s = 1'b0;*/
-				
 				unique case(1'b1)
 					i_cmd[MC_CMD_READ8_I]: target_state = S_WORK_READ8;
 					i_cmd[MC_CMD_READ16_I]: target_state = S_WORK_READ16;
@@ -233,21 +225,9 @@ module is42s16320f_controller
 						lo_hi_sel = i_adr & 1'b1; // 16-bit word
 					end
 				end
-				
-			//end
 			
 			end
 			state[S_WORK_ACTIVATE_I]: begin
-				//if(lo_hi_sel == 1'b1) begin
-					// high 8 bit access
-				//	o_dqmh = L;
-				//	o_dqml = H; // high impedance - ignored
-				//end else begin
-					// low 8 bit access
-				//	o_dqmh = H; // high impedance - ignored
-				//	o_dqml = L;
-				//end
-				
 				unique case(1'b1)
 					i_cmd[MC_CMD_READ8_I], i_cmd[MC_CMD_WRITE8_I]: begin
 						if(lo_hi_sel == 1'b1) begin
@@ -367,9 +347,7 @@ module is42s16320f_controller
 					wait_counter = 0;
 				end
 			end
-			default: begin
-				state = S_WORK_IDLE;
-			end
+			default: state = S_WORK_IDLE;
 		endcase
 	end
 

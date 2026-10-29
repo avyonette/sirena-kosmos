@@ -45,7 +45,6 @@ module cpu_mmu(
 	input logic i_sdram_done,
 	
 	// sysram
-	//output MemCtrlCmd o_sysram_cmd,
 	output logic o_sysram_write,
 	output logic [16:0] o_sysram_adr,
 	output logic [31:0] o_sysram_data,
@@ -95,13 +94,9 @@ module cpu_mmu(
 	State state = S_IDLE;
 	State target_state = S_IDLE;
 	
-	//ReqSize cmd_data_size;
-	//logic [4:0] data_shift;
-	
 	// waiting
 	logic [6:0] wait_counter;
 	logic [6:0] wait_amount;
-	//State wait_target;
 	
 	// address ranges
 	parameter
@@ -141,7 +136,6 @@ module cpu_mmu(
 			end else if(i_adr >= PMM1_BASE && i_adr < PMM1_LIMIT) begin // L1 PMM
 				;
 			end else if(i_adr >= SYS_RAM_BASE && i_adr <= SYS_RAM_LIMIT) begin // System RAM
-				//o_sysram_cmd = i_cmd;
 				o_sysram_adr = (i_adr - SYS_RAM_BASE) >> 2 /* word align */; // truncation OK
 				o_sysram_data = i_data;
 				
@@ -156,53 +150,20 @@ module cpu_mmu(
 			end
 		end
 	endtask
-	
-	/*always @(negedge clk) begin
-		o_sdram_cmd = MC_CMD_NOP;
-		o_sysram_write = 1'b0;
-	end*/
 
 	always @(posedge clk) begin
-		//o_rdy = 1'b0;
-		
 		unique case(1'b1)
 			state[S_IDLE_I]: begin
-				//o_rdy = 1'b1;
-				
 				unique case(1'b1)
-					i_cmd[MMU_CMD_MREAD8_I]: begin
-						//cmd_data_size = REQ_BYTE;
-						route_address(MC_CMD_READ8, i_adr, S_READ8, 0);
-					end
-					i_cmd[MMU_CMD_MREAD16_I]: begin
-						//cmd_data_size = REQ_HALF_WORD;
-						route_address(MC_CMD_READ16, i_adr, S_READ16, 0);
-					end
-					i_cmd[MMU_CMD_MREAD32_I]: begin
-						//cmd_data_size = REQ_WORD;
-						route_address(MC_CMD_READ32, i_adr, S_READ32, 0);
-					end
-					i_cmd[MMU_CMD_MWRITE8_I]: begin
-						//cmd_data_size = REQ_BYTE;
-						route_address(MC_CMD_WRITE8, i_adr, S_WRITE8, i_data);
-					end
-					i_cmd[MMU_CMD_MWRITE16_I]: begin
-						//cmd_data_size = REQ_HALF_WORD;
-						route_address(MC_CMD_WRITE16, i_adr, S_WRITE16, i_data);
-					end
-					i_cmd[MMU_CMD_MWRITE32_I]: begin
-						//cmd_data_size = REQ_WORD;
-						route_address(MC_CMD_WRITE32, i_adr, S_WRITE32, i_data);
-					end
-					default: begin
-						o_rdy = 1'b1;
+					i_cmd[MMU_CMD_MREAD8_I]: route_address(MC_CMD_READ8, i_adr, S_READ8, 0);
+					i_cmd[MMU_CMD_MREAD16_I]: route_address(MC_CMD_READ16, i_adr, S_READ16, 0);
+					i_cmd[MMU_CMD_MREAD32_I]: route_address(MC_CMD_READ32, i_adr, S_READ32, 0);
+					i_cmd[MMU_CMD_MWRITE8_I]: route_address(MC_CMD_WRITE8, i_adr, S_WRITE8, i_data);
+					i_cmd[MMU_CMD_MWRITE16_I]: route_address(MC_CMD_WRITE16, i_adr, S_WRITE16, i_data);
+					i_cmd[MMU_CMD_MWRITE32_I]: route_address(MC_CMD_WRITE32, i_adr, S_WRITE32, i_data);
+					default: o_rdy = 1'b1;
 					end
 				endcase
-
-				//if(i_cmd != 0) begin
-				//	o_done = 1'b0;
-				//	o_rdy = 1'b0;
-				//end
 			end
 			// for rdy wait
 			state[S_READ8_I]: route_address(MC_CMD_READ8, i_adr, S_READ8, 0);
