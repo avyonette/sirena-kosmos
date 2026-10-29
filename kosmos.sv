@@ -71,7 +71,7 @@ module kosmos(
 	MmuCmd mmu_cmd = MMU_CMD_NOP;
 	logic [31:0] mmu_adr_in;
 	logic [31:0] mmu_data_in;
-	logic [31:0] mmu_data_out;
+	logic [31:0] mmu_data_out = 32'hDEAD_C0DE;
 	logic [31:0] mmu_padr_out;
 	logic mmu_rdy = 1'b0;
 	logic mmu_done = 1'b0;
@@ -96,9 +96,9 @@ module kosmos(
 		.o_sysram_write(sysram_write),
 		.o_sysram_adr(sysram_adr),
 		.o_sysram_data(sysram_data_in),
-		.i_sysram_data(sysram_data_out),
+		.i_sysram_data(sysram_data_out)
 		
-		.i_leds(LEDR[7:0])
+		//.i_leds(LEDR[7:0])
 	);
 	
 	logic [3:0] b_num_0;
@@ -245,17 +245,21 @@ module kosmos(
 			end
 		end
 		
-		if(mmu_done) begin
+		//if(mmu_done) begin
+		//	mmu_cmd = MMU_CMD_NOP;
+		//end
+		
+		if(!SW[9:0]) begin
 			mmu_cmd = MMU_CMD_NOP;
 		end
 		
 		if(!SW[9:4]) begin
 			display_7seg(24'b0);
-			//LEDR[7:0] = 8'b0;
+			LEDR[7:0] = 8'b0;
 		end else begin
 			//display_7seg(24'hABCDEF);
 			display_7seg(mmu_data_out[31:8]);
-			//LEDR[7:0] = mmu_data_out[7:0];
+			LEDR[7:0] = mmu_data_out[7:0];
 		end
 		
 		/*if(mmu_cmd == 0) begin

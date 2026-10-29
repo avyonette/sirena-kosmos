@@ -39,8 +39,8 @@ module cpu_mmu(
 	// sdram
 	output MemCtrlCmd o_sdram_cmd,
 	output logic [31:0] o_sdram_adr,
-	output logic [7:0] o_sdram_data,
-	input logic [7:0] i_sdram_data,
+	output logic [31:0] o_sdram_data,
+	input logic [31:0] i_sdram_data,
 	input logic i_sdram_rdy,
 	input logic i_sdram_done,
 	
@@ -48,8 +48,8 @@ module cpu_mmu(
 	//output MemCtrlCmd o_sysram_cmd,
 	output logic o_sysram_write,
 	output logic [16:0] o_sysram_adr,
-	output logic [7:0] o_sysram_data,
-	input logic [7:0] i_sysram_data
+	output logic [31:0] o_sysram_data,
+	input logic [31:0] i_sysram_data
 );
 
 	typedef enum bit[2:0] {
@@ -92,8 +92,8 @@ module cpu_mmu(
 		S_SYSRAM_RET_I = 4'd10
 	} StateIndex;
 	
-	State state;
-	State target_state;
+	State state = S_IDLE;
+	State target_state = S_IDLE;
 	
 	//ReqSize cmd_data_size;
 	//logic [4:0] data_shift;
@@ -122,6 +122,9 @@ module cpu_mmu(
 		input [31:0] i_data;
 		
 		begin
+			o_rdy = 1'b0;
+			o_done = 1'b0;
+			
 			if(i_adr >= USER_RAM_BASE && i_adr < USER_RAM_LIMIT) begin // User RAM
 				if(!i_sdram_rdy) begin
 					target_state = rdy_state;
@@ -142,9 +145,9 @@ module cpu_mmu(
 				o_sysram_adr = (i_adr - SYS_RAM_BASE) >> 2 /* word align */; // truncation OK
 				o_sysram_data = i_data;
 				
-				case(1'b1)
-					i_cmd[MC_CMD_READ8], i_cmd[MC_CMD_READ16], i_cmd[MC_CMD_READ32]: o_sysram_write = 1'b0;
-					i_cmd[MC_CMD_WRITE8], i_cmd[MC_CMD_WRITE16], i_cmd[MC_CMD_WRITE32]: o_sysram_write = 1'b1;
+				unique case(1'b1)
+					i_cmd[MC_CMD_READ8_I], i_cmd[MC_CMD_READ16_I], i_cmd[MC_CMD_READ32_I]: o_sysram_write = 1'b0;
+					i_cmd[MC_CMD_WRITE8_I], i_cmd[MC_CMD_WRITE16_I], i_cmd[MC_CMD_WRITE32_I]: o_sysram_write = 1'b1;
 				endcase
 				
 				state = S_SYSRAM_RET; // can return immediately afterwards; sysram access is a single clock
@@ -196,10 +199,10 @@ module cpu_mmu(
 					end
 				endcase
 
-				if(i_cmd != 0) begin
-					o_done = 1'b0;
-					o_rdy = 1'b0;
-				end
+				//if(i_cmd != 0) begin
+				//	o_done = 1'b0;
+				//	o_rdy = 1'b0;
+				//end
 			end
 			// for rdy wait
 			state[S_READ8_I]: route_address(MC_CMD_READ8, i_adr, S_READ8, 0);
@@ -238,6 +241,7 @@ module cpu_mmu(
 				o_sysram_write = 1'b0;
 				state = S_IDLE;
 			end
+			default: state = S_IDLE;
 		endcase
 	end
 	
