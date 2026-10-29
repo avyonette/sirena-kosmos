@@ -14,7 +14,18 @@ module cpu_cu(
 	input [31:0] mmu_data_out,
 	input [31:0] mmu_padr_out,
 	input mmu_rdy,
-	input mmu_done
+	input mmu_done,
+	
+	// for debug
+	input [9:0] SW,
+	input [1:0] KEY,
+	output reg [9:0] LEDR,
+	output reg [7:0] HEX0,
+	output reg [7:0] HEX1,
+	output reg [7:0] HEX2,
+	output reg [7:0] HEX3,
+	output reg [7:0] HEX4,
+	output reg [7:0] HEX5
 );
 
 	typedef enum bit[3:0] {
@@ -27,6 +38,24 @@ module cpu_cu(
 		S_WAIT_MMU_RDY,
 		S_WAIT_MMU_DONE
 	} State;
+	
+	logic [23:0] dbg_hex;
+	logic [7:0] dbg_led;
+	
+	logic [31:0] dbg_num = 31'b0;
+	assign dbg_hex = dbg_num[31:8];
+	assign dbg_led = dbg_num[7:0];
+	
+	DbgMode dbg_mode;
+	logic [5:0] dbg_args;
+	
+	dbg_interface m_dbg(
+		.i_hex_dp(dbg_hex),
+		.i_led_dp(dbg_led),
+		.o_mode(dbg_mode),
+		.o_args(dbg_args),
+		.*
+	);
 	
 	wire [31:0] rfp;
 	wire [31:0] rrap;
@@ -58,11 +87,13 @@ module cpu_cu(
 	
 	CpuRegister pr_reg = REG_RIP;
 	
+	logic [31:0] c_inst = 31'b0;
+	
 	always @(posedge clk) begin
-		reg_rs = 32'b0;
-		reg_ws = 32'b0;
+		reg_rs <= 32'b0;
+		reg_ws <= 32'b0;
 		
-		mmu_cmd = MMU_CMD_NOP;
+		mmu_cmd <= MMU_CMD_NOP;
 		
 		case(state)
 			S_INIT_REGS: begin
@@ -70,34 +101,43 @@ module cpu_cu(
 				// one reg - one cycle
 				case(pr_reg)
 					REG_RIP: begin
-						reg_rs[REG_RIP] = 1'b1;
-						pr_reg = REG_RPDP;
+						reg_rs[REG_RIP] <= 1'b1;
+						pr_reg <= REG_RPDP;
 					end
 					REG_RPDP: begin
-						reg_rs[REG_RPDP] = 1'b1;
-						pr_reg = REG_RCF;
+						reg_rs[REG_RPDP] <= 1'b1;
+						pr_reg <= REG_RCF;
 					end
 					REG_RCF: begin
-						reg_rs[REG_RCF] = 1'b1;
-						pr_reg = REG_RIP;
-						state = S_FETCH_RIP_V2P;
+						reg_rs[REG_RCF] <= 1'b1;
+						pr_reg <= REG_RIP;
+						state <= S_FETCH_RIP_V2P;
 					end
 				endcase
 			end
 			S_FETCH_RIP_V2P: begin
 				// TODO convert virtual address to physical...
-				state = S_FETCH_READ_INST;
+				state <= S_FETCH_READ_INST;
 			end
 			S_FETCH_READ_INST: begin
-				mmu_cmd = MMU_CMD_MREAD32;
-				mmu_adr_in = reg_out[REG_RIP];
+				mmu_cmd <= MMU_CMD_MREAD32;
+				mmu_adr_in <= reg_out[REG_RIP];
 				
-				target_state = S_DECODE;
-				state = S_WAIT_MMU_DONE;
+				target_state <= S_DECODE;
+				state <= S_WAIT_MMU_DONE;
 			end
 			S_DECODE: begin
+				c_inst <= mmu_data_out;
+				state <= S_EXECUTE;
 			end
 			S_EXECUTE: begin
+				// execute...
+				
+				// increment RIP
+				reg_ws[REG_RIP] <= 1'b1;
+				reg_in[REG_RIP] <= reg_out[REG_RIP] + 1;
+				
+				state <= S_INIT_REGS;
 			end
 			/*S_WAIT: begin
 				if(wait_counter < wait_time) begin
@@ -107,10 +147,19 @@ module cpu_cu(
 				end
 			end*/
 			S_WAIT_MMU_RDY: begin
-				if(mmu_rdy) state = target_state;
+				if(mmu_rdy) state <= target_state;
 			end
 			S_WAIT_MMU_DONE: begin
-				if(mmu_rdy) state = target_state;
+				if(mmu_rdy) state <= target_state;
+			end
+		endcase
+		
+		case(dbg_mode)
+			DM_SHOW_RIP: begin
+				dbg_num <= reg_out[REG_RIP];
+			end
+			DM_SHOW_INST: begin
+				dbg_num <= c_inst;
 			end
 		endcase
 	end

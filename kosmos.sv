@@ -1,6 +1,4 @@
 import mem::*;
-import cpu::*;
-
 module kosmos(
 	input CLK_50_1,
 	output [12:0] DRAM_ADDR,
@@ -24,7 +22,6 @@ module kosmos(
 	output reg [7:0] HEX4,
 	output reg [7:0] HEX5
 );
-	wire clk = CLK_50_1;
 
 	MemCtrlCmd sdram_cmd = MC_CMD_NOP;
 	logic [31:0] sdram_adr;
@@ -120,7 +117,7 @@ module kosmos(
 		.*
 	);
 	
-	logic [3:0] b_num_0;
+	/*logic [3:0] b_num_0;
 	Binary_To_7Segment m_7seg0(
 		.i_Clk(CLK_50_1),
 		.i_Binary_Num(b_num_0),
@@ -209,7 +206,7 @@ module kosmos(
 			b_num_4 = num[19:16];
 			b_num_5 = num[23:20];
 		end
-	endtask
+	endtask*/
 	
 	/*always @(posedge clk) begin
 		LEDR[8] = mmu_done;

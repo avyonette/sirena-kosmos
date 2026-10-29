@@ -1,5 +1,3 @@
-package cpu;
-
 typedef enum bit[6:0] {
 	MMU_CMD_NOP = 7'd0,
 	MMU_CMD_TAVP = 7'd1,
@@ -21,9 +19,16 @@ typedef enum bit[2:0] {
 	MMU_CMD_MWRITE32_I = 3'd6
 } MmuCmdIndex;
 
-endpackage
+parameter
+	USER_RAM_BASE = 32'h0000_1000,
+	USER_RAM_LIMIT = 32'hFFA0_0000,
+	BLIP_ROM_BASE = 32'hFFA0_0000,
+	BLIP_ROM_LIMIT = 32'hFFA1_0000,
+	PMM1_BASE = 32'hFFFD_E000,
+	PMM1_LIMIT = 32'hFFFD_E200,
+	SYS_RAM_BASE = 32'hFFFE_0000,
+	SYS_RAM_LIMIT = 32'hFFFF_FFFF;
 
-import cpu::*;
 import mem::*;
 
 module cpu_mmu(
@@ -98,17 +103,6 @@ module cpu_mmu(
 	logic [6:0] wait_counter;
 	logic [6:0] wait_amount;
 	
-	// address ranges
-	parameter
-		USER_RAM_BASE = 32'h0000_1000,
-		USER_RAM_LIMIT = 32'hFFA0_0000,
-		BLIP_ROM_BASE = 32'hFFA0_0000,
-		BLIP_ROM_LIMIT = 32'hFFA1_0000,
-		PMM1_BASE = 32'hFFFD_E000,
-		PMM1_LIMIT = 32'hFFFD_E200,
-		SYS_RAM_BASE = 32'hFFFE_0000,
-		SYS_RAM_LIMIT = 32'hFFFF_FFFF;
-	
 	// helpers
 	task route_address;
 		input MemCtrlCmd i_cmd;
@@ -132,9 +126,9 @@ module cpu_mmu(
 					state = S_SDRAM_WAIT_DONE;
 				end
 			end else if(i_adr >= BLIP_ROM_BASE && i_adr < BLIP_ROM_LIMIT) begin // BLIP ROM
-				;
+				; // TODO
 			end else if(i_adr >= PMM1_BASE && i_adr < PMM1_LIMIT) begin // L1 PMM
-				;
+				; // TODO
 			end else if(i_adr >= SYS_RAM_BASE && i_adr <= SYS_RAM_LIMIT) begin // System RAM
 				o_sysram_adr = (i_adr - SYS_RAM_BASE) >> 2 /* word align */; // truncation OK
 				o_sysram_data = i_data;
@@ -146,7 +140,7 @@ module cpu_mmu(
 				
 				state = S_SYSRAM_RET; // can return immediately afterwards; sysram access is a single clock
 			end else begin // Reserved
-				;
+				; // TODO
 			end
 		end
 	endtask

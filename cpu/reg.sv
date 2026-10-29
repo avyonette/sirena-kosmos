@@ -85,7 +85,7 @@ module cpu_reg(
 	logic [31:0] rrap;
 	assign io_rrap = i_w[REG_RRAP] ? rrap : 32'hZZZZ_ZZZZ;
 	
-	assign rz = 32'b0;
+	assign io_rz = 32'b0;
 	
 	always @(posedge clk) begin
 		if(i_w) rfp <= io_rfp;
@@ -105,13 +105,13 @@ module cpu_reg(
 		for(i = 0; i < 32; i = i + 1) begin
 			if(i_r == (1 << i)) begin
 				o_sysram_write <= 1'b0;
-				o_sysram_adr <= rfp + i;
+				o_sysram_adr <= (rfp - SYS_RAM_BASE) + i; // sysram expects a word-aligned address; no need to do (i * 4)
 				r_tgt <= CpuRegister'(i);
 			end
 			
 			if(i_w == (1 << i)) begin
 				o_sysram_write <= 1'b1;
-				o_sysram_adr <= rfp + i;
+				o_sysram_adr <= (rfp - SYS_RAM_BASE) + i;
 				o_sysram_data <= i_reg[i];
 			end
 		end

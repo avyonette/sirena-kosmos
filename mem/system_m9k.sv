@@ -9,18 +9,18 @@ module sysram_controller
 );
 
 	// Declare the RAM variable
-	logic [DATA_WIDTH-1:0] ram[2**ADDR_WIDTH-1:0];
+	reg [DATA_WIDTH-1:0] ram[2**ADDR_WIDTH-1:0];
 	
 	// port A
 	always @(negedge clk) begin // negedge to execute right after MMU's cycle and before its next cycle
 		if(i_wA) ram[i_adrA] <= i_dataA;
-		else o_dataA <= ram[i_adrA];
+		o_dataA <= ram[i_adrA];
 	end
 	
 	// port B
 	always @(negedge clk) begin
 		if(i_wB) ram[i_adrB] <= i_dataB;
-		else o_dataB <= ram[i_adrB];
+		o_dataB <= ram[i_adrB];
 	end
 
 endmodule
