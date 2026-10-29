@@ -145,6 +145,8 @@ module is42s16320f_controller
 	
 	always @(posedge clk) begin
 		//o_rdy = 1'b0;
+
+		ref_counter = ref_counter + 1'b1;
 	
 		unique case(1'b1)
 			// initialisation cycle
@@ -202,7 +204,7 @@ module is42s16320f_controller
 						
 						// periodic refresh
 						if(ref_counter < REFRESH_CYCLES) begin
-							ref_counter = ref_counter + 1'b1;
+							//ref_counter = ref_counter + 1'b1;
 							call_command(0, S_NONE, L, H, H, H, 0, 0); // NOP
 						end else begin
 							call_command(0, S_NONE, L, L, L, H, 0, 0); // REF

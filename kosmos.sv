@@ -55,7 +55,7 @@ module kosmos(
 	);
 	
 	//MemCtrlCmd sysram_cmd = MC_CMD_NOP;
-	logic sysram_write;
+	logic sysram_write = 1'b0;
 	logic [17:0] sysram_adr;
 	logic [31:0] sysram_data_in;
 	logic [31:0] sysram_data_out;

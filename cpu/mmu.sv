@@ -154,10 +154,10 @@ module cpu_mmu(
 		end
 	endtask
 	
-	always @(negedge clk) begin
+	/*always @(negedge clk) begin
 		o_sdram_cmd = MC_CMD_NOP;
 		o_sysram_write = 1'b0;
-	end
+	end*/
 
 	always @(posedge clk) begin
 		//o_rdy = 1'b0;
@@ -214,13 +214,18 @@ module cpu_mmu(
 				o_rdy = 1'b1;
 				o_data = i_sdram_data; // if reading the caller will just ignore this
 				state = S_IDLE;
+				o_sdram_cmd = MC_CMD_NOP;
 			end
 			state[S_SDRAM_WAIT_RDY_I]: begin
+				o_sdram_cmd = MC_CMD_NOP;
+				
 				if(i_sdram_rdy) begin
 					state = target_state;
 				end
 			end
 			state[S_SDRAM_WAIT_DONE_I]: begin
+				o_sdram_cmd = MC_CMD_NOP;
+				
 				if(i_sdram_done) begin
 					state = S_SDRAM_RET;
 				end
@@ -230,6 +235,7 @@ module cpu_mmu(
 				o_data = i_sysram_data;
 				o_done = 1'b1;
 				o_rdy = 1'b1;
+				o_sysram_write = 1'b0;
 				state = S_IDLE;
 			end
 		endcase
