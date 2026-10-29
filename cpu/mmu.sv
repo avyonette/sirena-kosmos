@@ -139,8 +139,10 @@ module cpu_mmu(
 				endcase
 				
 				state = S_SYSRAM_RET; // can return immediately afterwards; sysram access is a single clock
-			end else begin // Reserved
-				; // TODO
+			end else begin // Reserved TODO
+				state = S_IDLE;
+				o_rdy = 1'b1;
+				o_data = 32'b0;
 			end
 		end
 	endtask

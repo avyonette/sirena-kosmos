@@ -1,6 +1,6 @@
 typedef enum bit[3:0] {
-	DM_SHOW_RIP,
-	DM_SHOW_INST
+	DM_SHOW_RIP = 4'b0000,
+	DM_SHOW_INST = 4'b0001
 } DbgMode;
 
 module dbg_interface(
@@ -10,6 +10,7 @@ module dbg_interface(
 	input [9:0] i_led_dp,
 	
 	output DbgMode o_mode,
+	output reg o_freeze,
 	output [5:0] o_args,
 	
 	input [9:0] SW,
@@ -32,9 +33,29 @@ module dbg_interface(
 	assign b_num_4 = i_hex_dp[19:16];
 	assign b_num_5 = i_hex_dp[23:20];
 	
-	assign o_mode = DbgMode'(SW[3:0]);
-	assign o_args = SW[9:4];
+	assign o_mode = DbgMode'(SW[4:1]);
+	assign o_args = SW[9:5];
+	
+	logic step_pulse1, step_pulse2, step_pulse3;
+	logic step_pulse = 1'b0;
+	assign step_pulse = step_pulse2 && !step_pulse3;
 
+	always @(posedge clk) begin
+		step_pulse1 <= !KEY[1];
+		step_pulse2 <= step_pulse1;
+		step_pulse3 <= step_pulse2;
+		
+		if(SW[0]) begin // frozen
+			if(!KEY[0] || step_pulse) begin // KEY0 steps when frozen, KEY1 steps once with a pulse
+				o_freeze <= 1'b0;
+			end else begin
+				o_freeze <= 1'b1;
+			end
+		end else begin
+			o_freeze <= 1'b0;
+		end
+	end
+	
 	logic [3:0] b_num_0;
 	Binary_To_7Segment m_7seg0(
 		.i_Clk(clk),

@@ -28,7 +28,8 @@ module cpu_cu(
 	output reg [7:0] HEX5
 );
 
-	typedef enum bit[3:0] {
+	typedef enum bit[4:0] {
+		S_FREEZE,
 		S_INIT_REGS,
 		S_FETCH_RIP_V2P,
 		S_FETCH_READ_INST,
@@ -40,20 +41,22 @@ module cpu_cu(
 	} State;
 	
 	logic [23:0] dbg_hex;
-	logic [7:0] dbg_led;
+	logic [9:0] dbg_led;
 	
 	logic [31:0] dbg_num = 31'b0;
 	assign dbg_hex = dbg_num[31:8];
-	assign dbg_led = dbg_num[7:0];
+	assign dbg_led[9:2] = dbg_num[7:0];
 	
 	DbgMode dbg_mode;
-	logic [5:0] dbg_args;
+	logic dbg_freeze;
+	logic [4:0] dbg_args;
 	
 	dbg_interface m_dbg(
 		.i_hex_dp(dbg_hex),
 		.i_led_dp(dbg_led),
 		.o_mode(dbg_mode),
 		.o_args(dbg_args),
+		.o_freeze(dbg_freeze),
 		.*
 	);
 	
@@ -95,7 +98,7 @@ module cpu_cu(
 		
 		mmu_cmd <= MMU_CMD_NOP;
 		
-		case(state)
+		unique case(state)
 			S_INIT_REGS: begin
 				// read all required registers for a single step (rip, rpdp, rcf)
 				// one reg - one cycle
@@ -111,7 +114,7 @@ module cpu_cu(
 					REG_RCF: begin
 						reg_rs[REG_RCF] <= 1'b1;
 						pr_reg <= REG_RIP;
-						state <= S_FETCH_RIP_V2P;
+						state <= dbg_freeze ? S_FREEZE : S_FETCH_RIP_V2P;
 					end
 				endcase
 			end
@@ -152,15 +155,20 @@ module cpu_cu(
 			S_WAIT_MMU_DONE: begin
 				if(mmu_rdy) state <= target_state;
 			end
+			S_FREEZE: begin
+				if(!dbg_freeze) state <= S_FETCH_RIP_V2P;
+			end
 		endcase
 		
-		case(dbg_mode)
+		// debug
+		unique case(dbg_mode)
 			DM_SHOW_RIP: begin
 				dbg_num <= reg_out[REG_RIP];
 			end
 			DM_SHOW_INST: begin
 				dbg_num <= c_inst;
 			end
+			default: ;
 		endcase
 	end
 
