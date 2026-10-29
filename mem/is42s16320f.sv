@@ -38,7 +38,7 @@ module is42s16320f_controller
 	logic dq_rw = 1'b0;
 	logic [15:0] o_dq = 16'b0;
 	
-	assign io_dq = dq_rw ? o_dq : 16'hZZ;
+	assign io_dq = dq_rw ? o_dq : 16'hZZZZ;
 	wire [15:0] i_dq = io_dq;
 	
 	localparam H = 1'b1; // high

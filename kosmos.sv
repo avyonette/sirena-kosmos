@@ -54,18 +54,28 @@ module kosmos(
 		.io_dq(DRAM_DQ)
 	);
 	
-	//MemCtrlCmd sysram_cmd = MC_CMD_NOP;
-	logic sysram_write = 1'b0;
-	logic [17:0] sysram_adr;
-	logic [31:0] sysram_data_in;
-	logic [31:0] sysram_data_out;
+	// port A - MMU
+	logic sysram_A_write = 1'b0;
+	logic [17:0] sysram_A_adr;
+	logic [31:0] sysram_A_data_in;
+	logic [31:0] sysram_A_data_out;
+	
+	// port B - CU (registers)
+	logic sysram_B_write = 1'b0;
+	logic [17:0] sysram_B_adr;
+	logic [31:0] sysram_B_data_in;
+	logic [31:0] sysram_B_data_out;
 	
 	sysram_controller m_sysram(
 		.clk(CLK_50_1),
-		.i_w(sysram_write),
-		.i_adr(sysram_adr),
-		.i_data(sysram_data_in),
-		.o_data(sysram_data_out)
+		.i_wA(sysram_A_write),
+		.i_adrA(sysram_A_adr),
+		.i_dataA(sysram_A_data_in),
+		.o_dataA(sysram_A_data_out),
+		.i_wB(sysram_B_write),
+		.i_adrB(sysram_B_adr),
+		.i_dataB(sysram_B_data_in),
+		.o_dataB(sysram_B_data_out)
 	);
 	
 	MmuCmd mmu_cmd = MMU_CMD_NOP;
@@ -93,12 +103,21 @@ module kosmos(
 		.i_sdram_rdy(sdram_rdy),
 		.i_sdram_done(sdram_done),
 		
-		.o_sysram_write(sysram_write),
-		.o_sysram_adr(sysram_adr),
-		.o_sysram_data(sysram_data_in),
-		.i_sysram_data(sysram_data_out)
+		.o_sysram_write(sysram_A_write),
+		.o_sysram_adr(sysram_A_adr),
+		.o_sysram_data(sysram_A_data_in),
+		.i_sysram_data(sysram_A_data_out)
 		
 		//.i_leds(LEDR[7:0])
+	);
+	
+	cpu_cu m_cu(
+		.clk(CLK_50_1),
+		.o_sysram_write(sysram_B_write),
+		.o_sysram_adr(sysram_B_adr),
+		.o_sysram_data(sysram_B_data_in),
+		.i_sysram_data(sysram_B_data_out),
+		.*
 	);
 	
 	logic [3:0] b_num_0;
@@ -192,7 +211,7 @@ module kosmos(
 		end
 	endtask
 	
-	always @(posedge clk) begin
+	/*always @(posedge clk) begin
 		LEDR[8] = mmu_done;
 		LEDR[9] = mmu_rdy;
 		mmu_cmd = MMU_CMD_NOP;
@@ -253,12 +272,6 @@ module kosmos(
 			display_7seg(mmu_data_out[31:8]);
 			LEDR[7:0] = mmu_data_out[7:0];
 		end
-		
-		/*if(mmu_cmd == 0) begin
-			LEDR[7] = 1'b1;
-		end else begin
-			LEDR[7] = 1'b0;
-		end*/
-	end
+	end*/
 
 endmodule

@@ -162,7 +162,6 @@ module cpu_mmu(
 					i_cmd[MMU_CMD_MWRITE16_I]: route_address(MC_CMD_WRITE16, i_adr, S_WRITE16, i_data);
 					i_cmd[MMU_CMD_MWRITE32_I]: route_address(MC_CMD_WRITE32, i_adr, S_WRITE32, i_data);
 					default: o_rdy = 1'b1;
-					end
 				endcase
 			end
 			// for rdy wait
