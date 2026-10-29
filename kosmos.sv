@@ -199,9 +199,9 @@ module kosmos(
 		
 		if(mmu_rdy) begin
 			if(SW[0]) begin
-				// write half-word to 0x0021 AB12
-				mmu_cmd = MMU_CMD_MWRITE16;
-				mmu_data_in = 16'hC0DE;
+				// write byte to 0x0021 AB12
+				mmu_cmd = MMU_CMD_MWRITE8;
+				mmu_data_in = 8'b10101010;
 				mmu_adr_in = 32'h0021_AB12;
 			end else if(SW[1]) begin
 				// write half-word to 0xFFFF 1234
@@ -209,10 +209,10 @@ module kosmos(
 				mmu_data_in = 16'hDEAD;
 				mmu_adr_in = 32'hFFFF_1234;
 			end else if(SW[2]) begin
-				// write word to 0xA123 4560
+				// write word to 0x0123 4560
 				mmu_cmd = MMU_CMD_MWRITE32;
-				mmu_data_in = 32'hBEEF_C0DE;
-				mmu_adr_in = 32'hA123_4560;
+				mmu_data_in = 32'hBEEF_9876;
+				mmu_adr_in = 32'h0123_4560;
 			end else if(SW[3]) begin
 				// write word to 0xFFFE 1000
 				mmu_cmd = MMU_CMD_MWRITE32;
@@ -220,20 +220,20 @@ module kosmos(
 				mmu_adr_in = 32'hFFFE_1000;
 			end else if(SW[4]) begin
 				// read half-word from 0x0021 AB12
-				mmu_cmd = MMU_CMD_MREAD16;
+				mmu_cmd = MMU_CMD_MREAD8;
 				mmu_adr_in = 32'h0021_AB12;
 			end else if(SW[5]) begin
 				// read half-word from 0xFFFF 1234
 				mmu_cmd = MMU_CMD_MREAD16;
 				mmu_adr_in = 32'hFFFF_1234;
 			end else if(SW[6]) begin
-				// read half-word from 0xA123 4560
-				mmu_cmd = MMU_CMD_MREAD16;
-				mmu_adr_in = 32'hA123_4560;
+				// read word from 0x0123 4560
+				mmu_cmd = MMU_CMD_MREAD32;
+				mmu_adr_in = 32'h0123_4560;
 			end else if(SW[7]) begin
-				// read half-word from 0xA123 4562
+				// read half-word from 0x0123 4562
 				mmu_cmd = MMU_CMD_MREAD16;
-				mmu_adr_in = 32'hA123_4562;
+				mmu_adr_in = 32'h0123_4562;
 			end else if(SW[8]) begin
 				// read half-word from 0xFFFF 1000
 				mmu_cmd = MMU_CMD_MREAD16;

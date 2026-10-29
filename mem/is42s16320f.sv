@@ -102,10 +102,12 @@ module is42s16320f_controller
 	// counters
 	reg [31:0] clk_counter = 0;
 	reg [31:0] wait_counter = 0;
+	reg [31:0] wait_time = 0;
 	
 	// helper functions
 	task call_command;
-		input set_state;
+		//input set_state;
+		input [31:0] cmd_cycles;
 		input State next_state;
 		input cs;
 		input ras;
@@ -122,9 +124,10 @@ module is42s16320f_controller
 			o_ba = ba;
 			o_a = a;
 			
-			if(set_state) begin
+			if(cmd_cycles > 0) begin
 				state = S_CMD_WAIT;
 				target_state = next_state;
+				wait_time = cmd_cycles;
 			end
 		end
 	endtask
@@ -162,11 +165,11 @@ module is42s16320f_controller
 				end
 			end
 			state[S_INIT_PRECHARGE_I]: begin
-				call_command(1, S_INIT_REFRESH, L, L, H, L, 0, 13'b0010000000000); // PALL
+				call_command(T_RC_CYCLES, S_INIT_REFRESH, L, L, H, L, 0, 13'b0010000000000); // PALL
 			end
 			state[S_INIT_REFRESH_I]: begin
 				if(clk_counter < 2) begin // two AUTO REFRESH cycles
-					call_command(1, S_INIT_REFRESH, L, L, L, H, 0, 0); // REF
+					call_command(T_RC_CYCLES, S_INIT_REFRESH, L, L, L, H, 0, 0); // REF
 					clk_counter = clk_counter + 1;
 				end else begin
 					clk_counter = 0;
@@ -176,7 +179,7 @@ module is42s16320f_controller
 			state[S_INIT_SETUP_I]: begin
 				// 24. MODE REGISTER DEFINITION
 				// SLA, SO, CL3, S, 1
-				call_command(1, S_INIT_OK, L, L, L, L, 0, 13'b0001000110000); // MRS
+				call_command(T_RC_CYCLES, S_INIT_OK, L, L, L, L, 0, 13'b0001000110000); // MRS
 			end
 			state[S_INIT_OK_I]: begin
 				o_dqmh = L;
@@ -245,18 +248,36 @@ module is42s16320f_controller
 				//	o_dqml = L;
 				//end
 				
+				unique case(1'b1)
+					i_cmd[MC_CMD_READ8_I], i_cmd[MC_CMD_WRITE8_I]: begin
+						if(lo_hi_sel == 1'b1) begin
+							// high 8 bit access
+							o_dqmh = L;
+							o_dqml = H; // high impedance - ignored
+						end else begin
+							// low 8 bit access
+							o_dqmh = H; // high impedance - ignored
+							o_dqml = L;
+						end
+					end
+					default: begin
+						o_dqmh = L;
+						o_dqml = L;
+					end
+				endcase
+				
 				// need to wait 2 cycles for DQM to propagate (?)
 				// "DQ's read data is subject to the logic level on the DQM inputs two clocks earlier"
-				//if(clk_counter < 2) begin
-				//	clk_counter = clk_counter + 1;
-				//	call_command(0, S_NONE, L, H, H, H, 0, 0); // NOP
-				//end else begin
+				if(clk_counter < 2) begin
+					clk_counter = clk_counter + 1;
+					call_command(0, S_NONE, L, H, H, H, 0, 0); // NOP
+				end else begin
 					clk_counter = 0;
-					call_command(1, target_state, L, L, H, H, adr_bank_index, adr_row_index); // ACT
-				//end
+					call_command(T_RC_CYCLES, target_state, L, L, H, H, adr_bank_index, adr_row_index); // ACT
+				end
 			end
 			state[S_WORK_READ8_I]: begin
-				call_command(1, S_WORK_READ8_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
+				call_command(T_RC_CYCLES, S_WORK_READ8_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
 			end
 			state[S_WORK_READ8_RESULT_I]: begin
 				if(lo_hi_sel == 1'b1) begin
@@ -271,7 +292,7 @@ module is42s16320f_controller
 				o_done = 1'b1;
 			end
 			state[S_WORK_READ16_I]: begin
-				call_command(1, S_WORK_READ16_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
+				call_command(T_RC_CYCLES, S_WORK_READ16_RESULT, L, H, L, H, adr_bank_index, adr_col_index); // READ
 			end
 			state[S_WORK_READ16_RESULT_I]: begin
 				o_data = i_dq;
@@ -281,7 +302,7 @@ module is42s16320f_controller
 			state[S_WORK_READ32_I]: begin
 				// reusing the low/high selector but in a silly way :3
 				// TODO is it possible for +1 to be out of the row/col/bank range when reading a 32-bit aligned address?
-				call_command(1, S_WORK_READ32_RESULT, L, H, L, H, adr_bank_index, adr_col_index + lo_hi_sel);
+				call_command(T_RC_CYCLES, S_WORK_READ32_RESULT, L, H, L, H, adr_bank_index, adr_col_index + lo_hi_sel);
 			end
 			state[S_WORK_READ32_RESULT_I]: begin
 				if(lo_hi_sel == 1'b0) begin
@@ -307,13 +328,13 @@ module is42s16320f_controller
 				end
 				
 				o_done = 1'b1;
-				call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+				call_command(T_RC_CYCLES, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 			end
 			state[S_WORK_WRITE16_I]: begin
 				dq_rw = 1'b1; // make dq writeable
 				o_dq = i_data[15:0];
 				o_done = 1'b1;
-				call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+				call_command(T_RC_CYCLES, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 			end
 			state[S_WORK_WRITE32_I]: begin
 				// reusing the low/high selector but in a silly way :3
@@ -322,16 +343,16 @@ module is42s16320f_controller
 				if(lo_hi_sel == 1'b0) begin
 					o_dq = i_data[15:0];
 					lo_hi_sel = 1'b1;
-					call_command(1, S_WORK_WRITE32, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+					call_command(T_RC_CYCLES, S_WORK_WRITE32, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 				end else begin
 					o_dq = i_data[31:16];
 					lo_hi_sel = 1'b0;
-					call_command(1, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
+					call_command(T_RC_CYCLES, S_WORK_PRECHARGE, L, H, L, L, adr_bank_index, adr_col_index); // WRITE
 					o_done = 1'b1;
 				end
 			end
 			state[S_WORK_PRECHARGE_I]: begin
-				call_command(1, S_WORK_IDLE, L, L, H, L, adr_bank_index, 0); // PRE
+				call_command(T_RC_CYCLES, S_WORK_IDLE, L, L, H, L, adr_bank_index, 0); // PRE
 				//s = 1'b1;
 				o_rdy = 1'b1;
 			end
@@ -339,7 +360,7 @@ module is42s16320f_controller
 			state[S_CMD_WAIT_I]: begin
 				call_command(0, S_NONE, L, H, H, H, 0, 0); // NOP
 				
-				if(wait_counter < T_RC_CYCLES) begin
+				if(wait_counter < wait_time) begin
 					wait_counter = wait_counter + 1;
 				end else begin
 					state = target_state;
