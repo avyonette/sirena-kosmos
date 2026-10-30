@@ -36,60 +36,51 @@ module cpu_reg(
 	input clk,
 	
 	/* global */
-	inout [31:0] io_rfp,
-	inout [31:0] io_rrap,
-	output [31:0] io_rz,
+	//inout [31:0] io_rfp,
+	//inout [31:0] io_rrap,
+	//output [31:0] io_rz,
+	
+	input [31:0] i_rfp,
+	output [31:0] o_rfp,
+	input i_w_rfp,
+	
+	input [31:0] i_rrap,
+	output [31:0] o_rrap,
+	input i_w_rrap,
+	
+	output [31:0] o_rz,
 	
 	/* local */
-	/*inout [31:0] io_r0,
-	inout [31:0] io_r1,
-	inout [31:0] io_r2,
-	inout [31:0] io_r3,
-	inout [31:0] io_r4,
-	inout [31:0] io_r5,
-	inout [31:0] io_r6,
-	inout [31:0] io_r7,
-	inout [31:0] io_r8,
-	inout [31:0] io_r9,
-	inout [31:0] io_r10,
-	inout [31:0] io_r11,
-	inout [31:0] io_r12,
-	inout [31:0] io_r13,
-	inout [31:0] io_r14,
-	inout [31:0] io_r15,
+	input [27 /* 28 local registers */:0][31:0] i_reg,
+	output [27:0][31:0] o_reg,
 	
-	inout [31:0] io_rip,
-	inout [31:0] io_rtp,
-	inout [31:0] io_rsp,
-	inout [31:0] io_rlfp,
-	inout [31:0] io_rpdp,
-	inout [31:0] io_rcf,
-	inout [31:0] io_rpl,*/
-	
-	input [31:0][31:0] i_reg,
-	output [31:0][31:0] o_reg,
-	
-	input [31:0] i_r,
-	input [31:0] i_w,
+	input [27:0] i_r,
+	input [27:0] i_w,
 	
 	/* sysram */
 	output logic o_sysram_write,
-	output logic [16:0] o_sysram_adr,
+	output logic [14:0] o_sysram_adr,
 	output logic [31:0] o_sysram_data,
 	input logic [31:0] i_sysram_data
 );
 
 	logic [31:0] rfp;
-	assign io_rfp = i_w[REG_RFP] ? rfp : 32'hZZZZ_ZZZZ;
+	assign o_rfp = rfp;
+	//assign io_rfp = i_w[REG_RFP] ? rfp : 32'hZZZZ_ZZZZ;
+	//assign o_reg[REG_RFP] = rfp;
 	
 	logic [31:0] rrap;
-	assign io_rrap = i_w[REG_RRAP] ? rrap : 32'hZZZZ_ZZZZ;
+	assign o_rrap = rrap;
+	//assign io_rrap = i_w[REG_RRAP] ? rrap : 32'hZZZZ_ZZZZ;
+	//assign o_reg[REG_RRAP] = rrap;
 	
-	assign io_rz = 32'b0;
+	assign o_rz = 32'b0;
+	//assign io_rz = 32'b0;
+	//assign o_reg[REG_RZ] = 32'b0;
 	
-	always @(posedge clk) begin
-		if(i_w) rfp <= io_rfp;
-		if(i_w) rrap <= io_rrap;
+	always @(negedge clk) begin
+		if(i_w_rfp) rfp <= i_rfp;
+		if(i_w_rrap) rrap <= i_rrap;
 	end
 	
 	CpuRegister r_tgt;
@@ -102,36 +93,18 @@ module cpu_reg(
 			r_tgt <= REG_NULL;
 		end
 		
-		for(i = 0; i < 32; i = i + 1) begin
-			if(i_r == (1 << i)) begin
+		for(i = 0; i < 28 /* 28 local registers */; i = i + 1) begin
+			if(i_r[i]) begin
 				o_sysram_write <= 1'b0;
 				o_sysram_adr <= (rfp - SYS_RAM_BASE) + i; // sysram expects a word-aligned address; no need to do (i * 4)
 				r_tgt <= CpuRegister'(i);
 			end
 			
-			if(i_w == (1 << i)) begin
+			if(i_w[i]) begin
 				o_sysram_write <= 1'b1;
 				o_sysram_adr <= (rfp - SYS_RAM_BASE) + i;
 				o_sysram_data <= i_reg[i];
 			end
 		end
-	
-		/*case(1'b1)
-			for(i = 0; i < 32; i = i + 1) begin
-				i_r[i]: begin
-					o_sysram_write <= 1'b0;
-					o_sysram_adr <= rfp + i;
-					r_tgt = i;
-				end
-				
-				i_w[i]: begin
-					o_sysram_write <= 1'b1;
-					o_sysram_adr <= rfp + i;
-					o_sysram_data <= i_reg[i];
-				end
-			end
-			// ...
-			// ...
-		endcase*/
 	end
 endmodule

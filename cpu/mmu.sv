@@ -51,9 +51,13 @@ module cpu_mmu(
 	
 	// sysram
 	output logic o_sysram_write,
-	output logic [16:0] o_sysram_adr,
+	output logic [14:0] o_sysram_adr,
 	output logic [31:0] o_sysram_data,
-	input logic [31:0] i_sysram_data
+	input logic [31:0] i_sysram_data,
+	
+	// sysrom
+	output logic [13:0] o_sysrom_adr,
+	input logic [31:0] i_sysrom_data
 );
 
 	typedef enum bit[2:0] {
@@ -68,18 +72,19 @@ module cpu_mmu(
 		REQ_WORD_I = 2'd2
 	} ReqSizeIndex;
 
-	typedef enum bit[10:0] {
-		S_IDLE = 11'd1,
-		S_READ8 = 11'd2,
-		S_READ16 = 11'd4,
-		S_READ32 = 11'd8,
-		S_WRITE8 = 11'd16,
-		S_WRITE16 = 11'd32,
-		S_WRITE32 = 11'd64,
-		S_SDRAM_RET = 11'd128,
-		S_SDRAM_WAIT_RDY = 11'd256,
-		S_SDRAM_WAIT_DONE = 11'd512,
-		S_SYSRAM_RET = 11'd1024
+	typedef enum bit[15:0] {
+		S_IDLE = 16'd1,
+		S_READ8 = 16'd2,
+		S_READ16 = 16'd4,
+		S_READ32 = 16'd8,
+		S_WRITE8 = 16'd16,
+		S_WRITE16 = 16'd32,
+		S_WRITE32 = 16'd64,
+		S_SDRAM_RET = 16'd128,
+		S_SDRAM_WAIT_RDY = 16'd256,
+		S_SDRAM_WAIT_DONE = 16'd512,
+		S_SYSRAM_RET = 16'd1024,
+		S_SYSROM_RET = 16'd2048
 	} State;
 	
 	typedef enum bit[3:0] {
@@ -93,7 +98,8 @@ module cpu_mmu(
 		S_SDRAM_RET_I = 4'd7,
 		S_SDRAM_WAIT_RDY_I = 4'd8,
 		S_SDRAM_WAIT_DONE_I = 4'd9,
-		S_SYSRAM_RET_I = 4'd10
+		S_SYSRAM_RET_I = 4'd10,
+		S_SYSROM_RET_I = 4'd11
 	} StateIndex;
 	
 	State state = S_IDLE;
@@ -126,7 +132,8 @@ module cpu_mmu(
 					state = S_SDRAM_WAIT_DONE;
 				end
 			end else if(i_adr >= BLIP_ROM_BASE && i_adr < BLIP_ROM_LIMIT) begin // BLIP ROM
-				; // TODO
+				o_sysrom_adr = (i_adr - BLIP_ROM_BASE) >> 2 /* word align */; // truncation OK
+				state = S_SYSROM_RET; // can return immediately afterwards; sysrom access is a single clock
 			end else if(i_adr >= PMM1_BASE && i_adr < PMM1_LIMIT) begin // L1 PMM
 				; // TODO
 			end else if(i_adr >= SYS_RAM_BASE && i_adr <= SYS_RAM_LIMIT) begin // System RAM
@@ -195,6 +202,13 @@ module cpu_mmu(
 				o_done = 1'b1;
 				o_rdy = 1'b1;
 				o_sysram_write = 1'b0;
+				state = S_IDLE;
+			end
+			// sysrom
+			state[S_SYSROM_RET_I]: begin
+				o_data = i_sysrom_data;
+				o_done = 1'b1;
+				o_rdy = 1'b1;
 				state = S_IDLE;
 			end
 			default: state = S_IDLE;

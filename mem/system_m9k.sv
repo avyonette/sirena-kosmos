@@ -22,5 +22,5 @@ module sysram_controller
 		if(i_wB) ram[i_adrB] <= i_dataB;
 		o_dataB <= ram[i_adrB];
 	end
-
+	
 endmodule

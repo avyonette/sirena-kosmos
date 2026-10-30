@@ -1,6 +1,7 @@
 typedef enum bit[3:0] {
 	DM_SHOW_RIP = 4'b0000,
-	DM_SHOW_INST = 4'b0001
+	DM_SHOW_INST = 4'b0001,
+	DM_SHOW_REG = 4'b0010
 } DbgMode;
 
 module dbg_interface(

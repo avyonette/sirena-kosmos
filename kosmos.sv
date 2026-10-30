@@ -53,13 +53,13 @@ module kosmos(
 	
 	// port A - MMU
 	logic sysram_A_write = 1'b0;
-	logic [17:0] sysram_A_adr;
+	logic [14:0] sysram_A_adr;
 	logic [31:0] sysram_A_data_in;
 	logic [31:0] sysram_A_data_out;
 	
 	// port B - CU (registers)
 	logic sysram_B_write = 1'b0;
-	logic [17:0] sysram_B_adr;
+	logic [14:0] sysram_B_adr;
 	logic [31:0] sysram_B_data_in;
 	logic [31:0] sysram_B_data_out;
 	
@@ -73,6 +73,15 @@ module kosmos(
 		.i_adrB(sysram_B_adr),
 		.i_dataB(sysram_B_data_in),
 		.o_dataB(sysram_B_data_out)
+	);
+	
+	logic [13:0] sysrom_adr;
+	logic [31:0] sysrom_data_out;
+	
+	sysrom_controller m_sysrom(
+		.clk(CLK_50_1),
+		.i_adr(sysrom_adr),
+		.o_data(sysrom_data_out)
 	);
 	
 	MmuCmd mmu_cmd = MMU_CMD_NOP;
@@ -103,9 +112,10 @@ module kosmos(
 		.o_sysram_write(sysram_A_write),
 		.o_sysram_adr(sysram_A_adr),
 		.o_sysram_data(sysram_A_data_in),
-		.i_sysram_data(sysram_A_data_out)
+		.i_sysram_data(sysram_A_data_out),
 		
-		//.i_leds(LEDR[7:0])
+		.o_sysrom_adr(sysrom_adr),
+		.i_sysrom_data(sysrom_data_out)
 	);
 	
 	cpu_cu m_cu(
