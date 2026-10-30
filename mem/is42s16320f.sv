@@ -7,7 +7,6 @@
 
 	based on the documentation at https://www.issi.com/WW/pdf/42-45R-S_86400F-16320F.pdf
 */
-import mem::*;
 
 module is42s16320f_controller
 #(parameter CLK_TIME_NS = 20)

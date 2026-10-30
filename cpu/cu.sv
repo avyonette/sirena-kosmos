@@ -81,7 +81,7 @@ module cpu_cu(
 	logic [27:0] reg_rs; // read select
 	logic [27:0] reg_ws; // write select
 	
-	cpu_reg m_reg(
+	cpu_registers m_reg(
 		//.io_rfp(rfp),
 		//.io_rrap(rrap),
 		//.io_rz(rz),
@@ -110,7 +110,7 @@ module cpu_cu(
 	CpuRegister pr_reg = REG_RIP;
 	
 	logic [31:0] i_data = 31'b0; // instruction data
-	logic advance_ip;
+	logic advance_ip = 1'b1;
 	/*logic [3:0] i_opset;
 	logic [4:0] i_opcode;
 	
@@ -136,8 +136,6 @@ module cpu_cu(
 		reg_ws <= 28'b0;
 		
 		mmu_cmd <= MMU_CMD_NOP;
-		
-		advance_ip <= 1'b1;
 		
 		unique case(state)
 			S_RESET: begin
@@ -470,9 +468,10 @@ module cpu_cu(
 				if(advance_ip) begin
 					// increment RIP
 					reg_ws[REG_RIP] <= 1'b1;
-					reg_wr[REG_RIP] <= reg_rd[REG_RIP] + 1;
+					reg_wr[REG_RIP] <= reg_rd[REG_RIP] + 4;
 				end
 				
+				advance_ip <= 1'b1; // reset for next step
 				state <= S_LOAD_REGS;
 			end
 			/*S_WAIT: begin
@@ -509,6 +508,11 @@ module cpu_cu(
 					REG_NULL: dbg_num <= 32'b0;
 					default: dbg_num <= reg_rd[dbg_args];
 				endcase
+			end
+			DM_SHOW_STAGE: begin
+				//dbg_hex <= state;
+				//dbg_led <= 8'b0;
+				dbg_num <= state << 8;
 			end
 			default: ;
 		endcase

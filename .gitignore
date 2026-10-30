@@ -41,6 +41,7 @@ _output_files/
 output_files/
 out/
 simulation/
+obj_dir/
 PLLJ_PLLSPE_INFO.txt
 
 *.bak*

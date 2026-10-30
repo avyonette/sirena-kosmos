@@ -1,7 +1,8 @@
 typedef enum bit[3:0] {
 	DM_SHOW_RIP = 4'b0000,
 	DM_SHOW_INST = 4'b0001,
-	DM_SHOW_REG = 4'b0010
+	DM_SHOW_REG = 4'b0010,
+	DM_SHOW_STAGE = 4'b0011
 } DbgMode;
 
 module dbg_interface(
@@ -38,7 +39,7 @@ module dbg_interface(
 	assign o_args = SW[9:5];
 	
 	logic step_pulse1, step_pulse2, step_pulse3;
-	logic step_pulse = 1'b0;
+	logic step_pulse;
 	assign step_pulse = step_pulse2 && !step_pulse3;
 
 	always @(posedge clk) begin

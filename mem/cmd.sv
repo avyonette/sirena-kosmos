@@ -1,5 +1,3 @@
-package mem;
-
 typedef enum bit[5:0] {
 	MC_CMD_NOP = 6'd0,
 	MC_CMD_READ8 = 6'd1,
@@ -18,5 +16,3 @@ typedef enum bit[2:0] {
 	MC_CMD_WRITE16_I = 3'd4,
 	MC_CMD_WRITE32_I = 3'd5
 } MemCtrlCmdIndex;
-
-endpackage

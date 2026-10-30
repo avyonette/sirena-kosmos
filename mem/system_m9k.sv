@@ -1,3 +1,4 @@
+// TODO with 32-bit words this won't 'follow' endianess correctly, but maybe that's okay, hmhm...
 module sysram_controller
 #(parameter DATA_WIDTH=32 /*8*/, parameter ADDR_WIDTH=15 /*17*/)
 (
@@ -5,7 +6,7 @@ module sysram_controller
 	input i_wA, i_wB,
 	input [(ADDR_WIDTH-1):0] i_adrA, i_adrB,
 	input [(DATA_WIDTH-1):0] i_dataA, i_dataB,
-	output [(DATA_WIDTH-1):0] o_dataA, o_dataB
+	output var [(DATA_WIDTH-1):0] o_dataA, o_dataB
 );
 
 	// Declare the RAM variable

@@ -1,4 +1,3 @@
-import mem::*;
 module kosmos(
 	input CLK_50_1,
 	output [12:0] DRAM_ADDR,

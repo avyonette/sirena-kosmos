@@ -29,8 +29,6 @@ parameter
 	SYS_RAM_BASE = 32'hFFFE_0000,
 	SYS_RAM_LIMIT = 32'hFFFF_FFFF;
 
-import mem::*;
-
 module cpu_mmu(
 	input clk,
 	input MmuCmd i_cmd,
@@ -150,6 +148,7 @@ module cpu_mmu(
 				state = S_IDLE;
 				o_rdy = 1'b1;
 				o_data = 32'b0;
+				//o_done = 1'b1;
 			end
 		end
 	endtask

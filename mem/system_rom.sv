@@ -1,6 +1,6 @@
 // Quartus Prime Verilog Template
 // Single Port ROM
-
+// TODO with 32-bit words this won't 'follow' endianess correctly, but maybe that's okay, hmhm...
 module sysrom_controller
 #(parameter DATA_WIDTH=32, parameter ADDR_WIDTH=14)
 (
@@ -21,7 +21,9 @@ module sysrom_controller
 	// template later in this section.
 
 	initial begin
-		$readmemh("blip.rom", rom);
+		//$readmemh("blip.rom", rom);
+		rom[0] = 32'h00_00_00_00;
+		rom[1] = 32'h07_FF_F8_90;
 	end
 
 	always @(negedge clk) begin

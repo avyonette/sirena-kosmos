@@ -32,7 +32,7 @@ typedef enum bit[4:0] {
 	REG_RZ = 5'h1F
 } CpuRegister;
 
-module cpu_reg(
+module cpu_registers(
 	input clk,
 	
 	/* global */
@@ -52,7 +52,7 @@ module cpu_reg(
 	
 	/* local */
 	input [27 /* 28 local registers */:0][31:0] i_reg,
-	output [27:0][31:0] o_reg,
+	output var [27:0][31:0] o_reg,
 	
 	input [27:0] i_r,
 	input [27:0] i_w,
@@ -83,21 +83,31 @@ module cpu_reg(
 		if(i_w_rrap) rrap <= i_rrap;
 	end
 	
-	CpuRegister r_tgt;
+	CpuRegister r_tgt1 = REG_NULL;
+	CpuRegister r_tgt2 = REG_NULL;
 	
 	integer i;
 	
 	always @(negedge clk) begin
-		if(r_tgt != REG_NULL) begin
-			o_reg[r_tgt] <= i_sysram_data;
-			r_tgt <= REG_NULL;
+		o_sysram_write <= 1'b0;
+		
+		if(r_tgt2 != REG_NULL) begin
+			o_reg[r_tgt2] <= i_sysram_data;
+			r_tgt2 <= REG_NULL;
 		end
+		
+		if(r_tgt1 != REG_NULL) begin
+			r_tgt2 <= r_tgt1;
+			r_tgt1 <= REG_NULL;
+		end
+		
+		
 		
 		for(i = 0; i < 28 /* 28 local registers */; i = i + 1) begin
 			if(i_r[i]) begin
 				o_sysram_write <= 1'b0;
 				o_sysram_adr <= (rfp - SYS_RAM_BASE) + i; // sysram expects a word-aligned address; no need to do (i * 4)
-				r_tgt <= CpuRegister'(i);
+				r_tgt1 <= CpuRegister'(i);
 			end
 			
 			if(i_w[i]) begin
