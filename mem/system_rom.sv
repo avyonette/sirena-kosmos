@@ -21,11 +21,7 @@ module sysrom_controller
 	// template later in this section.
 
 	initial begin
-		//$readmemh("blip.rom", rom);
-		rom[0] = 32'h00_00_00_00; // nop
-		rom[1] = 32'h07_FF_F8_90; // jr -4
-		// TODO also with F0 CPU seems to go 0xFFA0_0000 -> _0004 -> _0008 -> _0000
-		// and with F8 0xFFA0_0000 -> _0004 -> _0008 -> _0004 -> _0008? there has to be something wrong
+		$readmemh("blip.rom", rom);
 	end
 
 	always @(negedge clk) begin

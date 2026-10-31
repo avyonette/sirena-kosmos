@@ -116,7 +116,7 @@ module cpu_mmu(
 		
 		begin
 			o_rdy = 1'b0;
-			o_done = 1'b0;
+			//o_done = 1'b0;
 			
 			if(i_adr >= USER_RAM_BASE && i_adr < USER_RAM_LIMIT) begin // User RAM
 				if(!i_sdram_rdy) begin
@@ -148,12 +148,14 @@ module cpu_mmu(
 				state = S_IDLE;
 				o_rdy = 1'b1;
 				o_data = 32'b0;
-				//o_done = 1'b1;
+				o_done = 1'b1;
 			end
 		end
 	endtask
 
 	always @(posedge clk) begin
+		o_done = 1'b0;
+		
 		unique case(1'b1)
 			state[S_IDLE_I]: begin
 				unique case(1'b1)

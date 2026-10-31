@@ -146,6 +146,7 @@ module is42s16320f_controller
 	
 	always @(posedge clk) begin
 		ref_counter = ref_counter + 1'b1;
+		o_done = 1'b0;
 	
 		unique case(1'b1)
 			// initialisation cycle
