@@ -1,7 +1,17 @@
 `define I_OPSET mmu_data_out[3:0]
 `define I_OPCODE mmu_data_out[8:4]
+
+`define R_DS mmu_data_out[13:9]
+`define R_RA mmu_data_out[18:14]
+`define R_RB mmu_data_out[23:19]
+`define R_FF mmu_data_out[31:24]
+
+`define I_DS mmu_data_out[13:9]
+`define I_VL mmu_data_out[29:14]
+`define I_FF mmu_data_out[31:30]
+
 `define J_TG mmu_data_out[26:9]
-// TODO J_TG range correct?
+`define J_RC mmu_data_out[31:27]
 
 module cpu_cu(
 	input clk,
@@ -66,33 +76,12 @@ module cpu_cu(
 		.*
 	);
 	
-	/*logic [31:0] rfp_rd;
-	logic [31:0] rfp_wr;
-	logic rfp_ws;
-	
-	logic [31:0] rrap_rd;
-	logic [31:0] rrap_wr;
-	logic rrap_ws;
-	
-	logic [31:0] rz_rd;
-	
-	logic [27:0][31:0] reg_rd;
-	logic [27:0][31:0] reg_wr;
-	
-	logic [27:0] reg_rs; // read select
-	logic [27:0] reg_ws;*/ // write select
-	
 	logic [31:0] rfp;
 	logic [31:0] rrap;
 	logic [31:0] rz;
 	assign rz = 32'b0;
 	
 	logic [27:0][31:0] reg_rd;
-	//logic [27:0][31:0] reg_wr;
-	
-	//logic [27:0] reg_rs = 27'b0; // read select
-	//logic [27:0] reg_ws = 27'b0; // write select
-	
 	CpuRegister reg_rd_tgt = REG_NULL;
 	
 	task reg_load;
@@ -116,24 +105,6 @@ module cpu_cu(
 		end
 	endtask
 	
-	/*cpu_registers m_reg(
-		//.io_rfp(rfp),
-		//.io_rrap(rrap),
-		//.io_rz(rz),
-		.i_rfp(rfp_wr),
-		.o_rfp(rfp_rd),
-		.i_w_rfp(rfp_ws),
-		.i_rrap(rrap_wr),
-		.o_rrap(rrap_rd),
-		.i_w_rrap(rrap_ws),
-		.o_rz(rz_rd),
-		.i_reg(reg_wr),
-		.o_reg(reg_rd),
-		.i_r(reg_rs),
-		.i_w(reg_ws),
-		.*
-	);*/
-	
 	// counters
 	/*reg [31:0] wait_counter = 0;
 	reg [31:0] wait_time = 0;*/
@@ -146,30 +117,8 @@ module cpu_cu(
 	
 	logic [31:0] i_data = 31'b0; // instruction data
 	logic advance_ip = 1'b1;
-	/*logic [3:0] i_opset;
-	logic [4:0] i_opcode;
-	
-	// R-type instruction
-	logic [4:0] r_ds;
-	logic [4:0] r_ra;
-	logic [4:0] r_rb;
-	logic [7:0] r_ff;
-	
-	// I-type instruction
-	logic [4:0] i_ds;
-	logic [15:0] i_vl;
-	logic [1:0] i_ff;
-	
-	// J-type instructions
-	logic [17:0] j_tg;
-	logic [4:0] j_rc;*/
 	
 	always @(posedge clk) begin
-		/*rfp_ws <= 1'b0;
-		rrap_ws <= 1'b0;
-		reg_rs <= 28'b0;
-		reg_ws <= 28'b0;*/
-		
 		mmu_cmd <= MMU_CMD_NOP;
 		
 		o_sysram_write = 1'b0;
@@ -184,20 +133,14 @@ module cpu_cu(
 				// TODO for loop and reset all registers instead of only the non-zero ones...
 				case(rst_reg)
 					REG_RFP: begin
-						//rfp_ws <= 1'b1;
-						//rfp_wr <= 32'hFFFF_FF80;
 						rfp <= 32'hFFFF_FF80;
 						rst_reg <= REG_RIP;
 					end
 					REG_RIP: begin
-						//reg_ws[REG_RIP] <= 1'b1;
-						//reg_wr[REG_RIP] <= 32'hFFA0_0000;
 						reg_store(REG_RIP, 32'hFFA0_0000);
 						rst_reg <= REG_RPL;
 					end
 					REG_RPL: begin
-						//reg_ws[REG_RPL] <= 1'b1;
-						//reg_wr[REG_RPL] <= 32'h1;
 						reg_store(REG_RPL, 32'h1);
 						rst_reg <= REG_RFP;
 						state <= S_LOAD_REGS;
@@ -209,17 +152,14 @@ module cpu_cu(
 				// one reg - one cycle
 				case(pr_reg)
 					REG_RIP: begin
-						//reg_rs[REG_RIP] <= 1'b1;
 						reg_load(REG_RIP);
 						pr_reg <= REG_RPDP;
 					end
 					REG_RPDP: begin
-						//reg_rs[REG_RPDP] <= 1'b1;
 						reg_load(REG_RPDP);
 						pr_reg <= REG_RPL;
 					end
 					REG_RPL: begin
-						//reg_rs[REG_RPL] <= 1'b1;
 						reg_load(REG_RPL);
 						pr_reg <= REG_RIP;
 						state <= dbg_freeze ? S_FREEZE : S_FETCH_RIP_V2P;
@@ -247,7 +187,7 @@ module cpu_cu(
 							end
 
 							CORE32_CPUID: begin
-								case(mmu_data_out[31:30]) // ff
+								case(`I_FF)
 									CORE32_CPUID_CPUID: begin
 										// TODO: CPUID
 									end
@@ -261,7 +201,7 @@ module cpu_cu(
 							end
 
 							CORE32_LDW: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_LDW_LDW: begin
 										// TODO: LDW
 									end
@@ -288,7 +228,7 @@ module cpu_cu(
 							end
 
 							CORE32_LLI: begin
-								case(mmu_data_out[31:30]) // ff
+								case(`I_FF)
 									CORE32_LLI_LLI: begin
 										// TODO: LLI
 									end
@@ -302,7 +242,7 @@ module cpu_cu(
 							end
 
 							CORE32_STW: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_STW_STW: begin
 										// TODO: STW
 									end
@@ -327,7 +267,7 @@ module cpu_cu(
 							end
 
 							CORE32_JAE: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_JAE_JAE: begin
 										// TODO: JAE
 									end
@@ -348,8 +288,6 @@ module cpu_cu(
 
 							CORE32_JR: begin
 								advance_ip <= 1'b0;
-								//reg_ws[REG_RIP] <= 1'b1;
-								//reg_wr[REG_RIP] <= reg_rd[REG_RIP] + $signed(`J_TG);
 								reg_store(REG_RIP, reg_rd[REG_RIP] + $signed(`J_TG));
 							end
 
@@ -382,7 +320,7 @@ module cpu_cu(
 							end
 
 							CORE32_CMPU: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_CMPU_CMPU: begin
 										// TODO: CMPU
 									end
@@ -396,7 +334,7 @@ module cpu_cu(
 							end
 
 							CORE32_ADD: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_ADD_ADD: begin
 										// TODO: ADD
 									end
@@ -418,7 +356,7 @@ module cpu_cu(
 							end
 
 							CORE32_AND: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_AND_AND: begin
 										// TODO: AND
 									end
@@ -435,7 +373,7 @@ module cpu_cu(
 							end
 
 							CORE32_SHL: begin
-								case(mmu_data_out[31:30]) // ff
+								case(`I_FF)
 									CORE32_SHL_SHL: begin
 										// TODO: SHL
 									end
@@ -452,7 +390,7 @@ module cpu_cu(
 							end
 
 							CORE32_SHLI: begin
-								case(mmu_data_out[31:30]) // ff
+								case(`I_FF)
 									CORE32_SHLI_SHLI: begin
 										// TODO: SHLI
 									end
@@ -485,7 +423,7 @@ module cpu_cu(
 							end
 
 							CORE32_MCW: begin
-								case(mmu_data_out[31:24]) // ff
+								case(`R_FF)
 									CORE32_MCW_MCW: begin
 										// TODO: MCW
 									end
@@ -516,8 +454,6 @@ module cpu_cu(
 			S_ADVANCE: begin
 				if(advance_ip) begin
 					// increment RIP
-					//reg_ws[REG_RIP] <= 1'b1;
-					//reg_wr[REG_RIP] <= reg_rd[REG_RIP] + 4;
 					reg_store(REG_RIP, reg_rd[REG_RIP] + 4);
 				end
 				
@@ -560,8 +496,6 @@ module cpu_cu(
 				endcase
 			end
 			DM_SHOW_STAGE: begin
-				//dbg_hex <= state;
-				//dbg_led <= 8'b0;
 				dbg_num <= state << 8;
 			end
 			default: ;
