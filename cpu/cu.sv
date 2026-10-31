@@ -162,7 +162,7 @@ module cpu_cu(
 					REG_RPL: begin
 						reg_load(REG_RPL);
 						pr_reg <= REG_RIP;
-						state <= dbg_freeze ? S_FREEZE : S_FETCH_RIP_V2P;
+						state <= S_FETCH_RIP_V2P;
 					end
 				endcase
 			end
@@ -174,7 +174,7 @@ module cpu_cu(
 				mmu_cmd <= MMU_CMD_MREAD32;
 				mmu_adr_in <= reg_rd[REG_RIP];
 				
-				target_state <= S_DECODE_EXECUTE;
+				target_state <= dbg_freeze ? S_FREEZE : S_DECODE_EXECUTE;
 				state <= S_WAIT_MMU_DONE;
 			end
 			S_DECODE_EXECUTE: begin
@@ -474,7 +474,7 @@ module cpu_cu(
 				if(mmu_done) state <= target_state;
 			end
 			S_FREEZE: begin
-				if(!dbg_freeze) state <= S_FETCH_RIP_V2P;
+				if(!dbg_freeze) state <= S_DECODE_EXECUTE;
 			end
 		endcase
 		
@@ -484,7 +484,7 @@ module cpu_cu(
 				dbg_num <= reg_rd[REG_RIP];
 			end
 			DM_SHOW_INST: begin
-				dbg_num <= i_data;
+				dbg_num <= mmu_data_out;
 			end
 			DM_SHOW_REG: begin
 				case(dbg_args)
