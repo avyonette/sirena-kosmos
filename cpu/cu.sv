@@ -1,6 +1,7 @@
 `define I_OPSET mmu_data_out[3:0]
 `define I_OPCODE mmu_data_out[8:4]
 `define J_TG mmu_data_out[26:9]
+// TODO J_TG range correct?
 
 module cpu_cu(
 	input clk,
@@ -65,7 +66,7 @@ module cpu_cu(
 		.*
 	);
 	
-	logic [31:0] rfp_rd;
+	/*logic [31:0] rfp_rd;
 	logic [31:0] rfp_wr;
 	logic rfp_ws;
 	
@@ -79,9 +80,43 @@ module cpu_cu(
 	logic [27:0][31:0] reg_wr;
 	
 	logic [27:0] reg_rs; // read select
-	logic [27:0] reg_ws; // write select
+	logic [27:0] reg_ws;*/ // write select
 	
-	cpu_registers m_reg(
+	logic [31:0] rfp;
+	logic [31:0] rrap;
+	logic [31:0] rz;
+	assign rz = 32'b0;
+	
+	logic [27:0][31:0] reg_rd;
+	//logic [27:0][31:0] reg_wr;
+	
+	//logic [27:0] reg_rs = 27'b0; // read select
+	//logic [27:0] reg_ws = 27'b0; // write select
+	
+	CpuRegister reg_rd_tgt = REG_NULL;
+	
+	task reg_load;
+		input CpuRegister tgt;
+		
+		begin
+			o_sysram_write = 1'b0;
+			o_sysram_adr <= (rfp - SYS_RAM_BASE) + tgt; // sysram expects a word-aligned address; no need to do (i * 4)
+			reg_rd_tgt <= tgt;
+		end
+	endtask
+	
+	task reg_store;
+		input CpuRegister tgt;
+		input [31:0] data;
+		
+		begin
+			o_sysram_write = 1'b1;
+			o_sysram_adr <= (rfp - SYS_RAM_BASE) + tgt; // sysram expects a word-aligned address; no need to do (i * 4)
+			o_sysram_data = data;
+		end
+	endtask
+	
+	/*cpu_registers m_reg(
 		//.io_rfp(rfp),
 		//.io_rrap(rrap),
 		//.io_rz(rz),
@@ -97,7 +132,7 @@ module cpu_cu(
 		.i_r(reg_rs),
 		.i_w(reg_ws),
 		.*
-	);
+	);*/
 	
 	// counters
 	/*reg [31:0] wait_counter = 0;
@@ -130,30 +165,40 @@ module cpu_cu(
 	logic [4:0] j_rc;*/
 	
 	always @(posedge clk) begin
-		rfp_ws <= 1'b0;
+		/*rfp_ws <= 1'b0;
 		rrap_ws <= 1'b0;
 		reg_rs <= 28'b0;
-		reg_ws <= 28'b0;
+		reg_ws <= 28'b0;*/
 		
 		mmu_cmd <= MMU_CMD_NOP;
+		
+		o_sysram_write = 1'b0;
+		
+		if(reg_rd_tgt != REG_NULL) begin
+			reg_rd[reg_rd_tgt] = i_sysram_data;
+			reg_rd_tgt = REG_NULL;
+		end
 		
 		unique case(state)
 			S_RESET: begin
 				// TODO for loop and reset all registers instead of only the non-zero ones...
 				case(rst_reg)
 					REG_RFP: begin
-						rfp_ws <= 1'b1;
-						rfp_wr <= 32'hFFFF_FF80;
+						//rfp_ws <= 1'b1;
+						//rfp_wr <= 32'hFFFF_FF80;
+						rfp <= 32'hFFFF_FF80;
 						rst_reg <= REG_RIP;
 					end
 					REG_RIP: begin
-						reg_ws[REG_RIP] <= 1'b1;
-						reg_wr[REG_RIP] <= 32'hFFA0_0000;
+						//reg_ws[REG_RIP] <= 1'b1;
+						//reg_wr[REG_RIP] <= 32'hFFA0_0000;
+						reg_store(REG_RIP, 32'hFFA0_0000);
 						rst_reg <= REG_RPL;
 					end
 					REG_RPL: begin
-						reg_ws[REG_RPL] <= 1'b1;
-						reg_wr[REG_RPL] <= 32'h1;
+						//reg_ws[REG_RPL] <= 1'b1;
+						//reg_wr[REG_RPL] <= 32'h1;
+						reg_store(REG_RPL, 32'h1);
 						rst_reg <= REG_RFP;
 						state <= S_LOAD_REGS;
 					end
@@ -164,15 +209,18 @@ module cpu_cu(
 				// one reg - one cycle
 				case(pr_reg)
 					REG_RIP: begin
-						reg_rs[REG_RIP] <= 1'b1;
+						//reg_rs[REG_RIP] <= 1'b1;
+						reg_load(REG_RIP);
 						pr_reg <= REG_RPDP;
 					end
 					REG_RPDP: begin
-						reg_rs[REG_RPDP] <= 1'b1;
+						//reg_rs[REG_RPDP] <= 1'b1;
+						reg_load(REG_RPDP);
 						pr_reg <= REG_RPL;
 					end
 					REG_RPL: begin
-						reg_rs[REG_RPL] <= 1'b1;
+						//reg_rs[REG_RPL] <= 1'b1;
+						reg_load(REG_RPL);
 						pr_reg <= REG_RIP;
 						state <= dbg_freeze ? S_FREEZE : S_FETCH_RIP_V2P;
 					end
@@ -300,8 +348,9 @@ module cpu_cu(
 
 							CORE32_JR: begin
 								advance_ip <= 1'b0;
-								reg_ws[REG_RIP] <= 1'b1;
-								reg_wr[REG_RIP] <= reg_rd[REG_RIP] + $signed(`J_TG);
+								//reg_ws[REG_RIP] <= 1'b1;
+								//reg_wr[REG_RIP] <= reg_rd[REG_RIP] + $signed(`J_TG);
+								reg_store(REG_RIP, reg_rd[REG_RIP] + $signed(`J_TG));
 							end
 
 							CORE32_JRE: begin
@@ -467,8 +516,9 @@ module cpu_cu(
 			S_ADVANCE: begin
 				if(advance_ip) begin
 					// increment RIP
-					reg_ws[REG_RIP] <= 1'b1;
-					reg_wr[REG_RIP] <= reg_rd[REG_RIP] + 4;
+					//reg_ws[REG_RIP] <= 1'b1;
+					//reg_wr[REG_RIP] <= reg_rd[REG_RIP] + 4;
+					reg_store(REG_RIP, reg_rd[REG_RIP] + 4);
 				end
 				
 				advance_ip <= 1'b1; // reset for next step
@@ -502,9 +552,9 @@ module cpu_cu(
 			end
 			DM_SHOW_REG: begin
 				case(dbg_args)
-					REG_RFP: dbg_num <= rfp_rd;
-					REG_RRAP: dbg_num <= rrap_rd;
-					REG_RZ: dbg_num <= rz_rd;
+					REG_RFP: dbg_num <= rfp;
+					REG_RRAP: dbg_num <= rrap;
+					REG_RZ: dbg_num <= rz;
 					REG_NULL: dbg_num <= 32'b0;
 					default: dbg_num <= reg_rd[dbg_args];
 				endcase
